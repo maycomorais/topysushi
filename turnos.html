@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Turnos</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabaseClient.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap');
+
+    :root {
+      /* ── Lado Esquerdo — Em Preparo ──────────── */
+      --bg-preparo:          #0a0f14;   /* fundo da coluna */
+      --preparo-accent:      #3b82f6;   /* cor de destaque (título, borda, ícone) */
+      --card-bg-preparo:     #111820;   /* fundo do card */
+      --card-text-preparo:   #3b82f6;   /* texto principal do card (nome/#) */
+
+      /* ── Lado Direito — Pronto ───────────────── */
+      --bg-pronto:           #0a0f14;
+      --pronto-accent:       #22c55e;
+      --card-bg-pronto:      #111820;
+      --card-text-pronto:    #22c55e;
+
+      /* ── Geral ───────────────────────────────── */
+      --bg-header:           #0d1219;   /* header + footer */
+      --btn-bg:              #1e2a38;   /* fundo dos botões PT/ES/⚙️ — nunca herda bg */
+      --btn-text:            #c8d4e0;   /* texto dos botões inativos */
+      --text:                #f0f4f8;
+      --muted:               #6b7a8d;
+      --border:              rgba(255,255,255,0.07);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-header);
+      font-family: 'Barlow', sans-serif;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border);
+      height: 70px;
+    }
+    .header-brand { display: flex; align-items: center; gap: 14px; }
+    .header-logo {
+      width: 44px; height: 44px;
+      border-radius: 10px; object-fit: contain; display: none;
+    }
+    .header-nome {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.5rem; font-weight: 800; letter-spacing: 0.5px; color: #fff;
+    }
+    .header-sub { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 18px; }
+    .header-clock { text-align: right; }
+    .clock-time {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2.2rem; font-weight: 700; color: #fff; letter-spacing: 2px; line-height: 1;
+    }
+    .clock-date { font-size: 0.75rem; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ── BOTÃO LANG / CONFIG ─────────────────────────────── */
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .btn-hdr {
+      background: var(--btn-bg);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--btn-text);
+      border-radius: 8px; padding: 5px 13px;
+      font-family: 'Barlow', sans-serif; font-size: 0.8rem; font-weight: 700;
+      cursor: pointer; letter-spacing: 1px; transition: all 0.15s;
+    }
+    .btn-hdr:hover {
+      background: color-mix(in srgb, var(--btn-bg) 60%, white);
+      color: #fff;
+    }
+    .btn-hdr.active {
+      background: #fff; color: #000;
+      border-color: rgba(255,255,255,0.6);
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.2);
+    }
+    /* Botão de cores — sempre visível, cor própria */
+    .btn-cores {
+      background: #2d4a3e !important;
+      border-color: #3d7a5e !important;
+      color: #4ade80 !important;
+      letter-spacing: 0.5px;
+    }
+    .btn-cores:hover {
+      background: #3a5e4e !important;
+      color: #86efac !important;
+    }
+
+    /* ── MAIN ────────────────────────────────────────────── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: calc(100vh - 70px - 42px);
+    }
+    .col { display: flex; flex-direction: column; overflow: hidden; }
+    .col-preparo { background: var(--bg-preparo); border-right: 1px solid var(--border); }
+    .col-pronto  { background: var(--bg-pronto); }
+
+    .col-header {
+      padding: 18px 28px 14px;
+      display: flex; align-items: center; gap: 14px;
+      border-bottom: 2px solid var(--border);
+    }
+    .col-preparo .col-header { border-bottom-color: var(--preparo-accent); }
+    .col-pronto  .col-header { border-bottom-color: var(--pronto-accent); }
+
+    .col-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; flex-shrink: 0;
+    }
+    .col-preparo .col-icon { background: color-mix(in srgb, var(--preparo-accent) 15%, transparent); }
+    .col-pronto  .col-icon { background: color-mix(in srgb, var(--pronto-accent)  15%, transparent); }
+
+    .col-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800; font-size: 1.4rem; letter-spacing: 1px; text-transform: uppercase;
+    }
+    .col-preparo .col-title { color: var(--preparo-accent); }
+    .col-pronto  .col-title { color: var(--pronto-accent); }
+
+    .col-subtitle { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
+
+    .col-count {
+      margin-left: auto; width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.1rem;
+    }
+    .col-preparo .col-count { background: color-mix(in srgb, var(--preparo-accent) 20%, transparent); color: var(--preparo-accent); }
+    .col-pronto  .col-count { background: color-mix(in srgb, var(--pronto-accent)  20%, transparent); color: var(--pronto-accent); }
+
+    /* ── GRID ────────────────────────────────────────────── */
+    .num-grid {
+      flex: 1; padding: 20px 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px; align-content: start; overflow-y: auto;
+    }
+    .num-grid::-webkit-scrollbar { width: 4px; }
+    .num-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── CARD ────────────────────────────────────────────── */
+    .num-card {
+      border-radius: 14px; padding: 16px 12px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px; text-align: center;
+      animation: cardIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+      position: relative; overflow: hidden; min-height: 110px;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: scale(0.8) translateY(10px); }
+      to   { opacity: 1; transform: scale(1)   translateY(0); }
+    }
+    .col-preparo .num-card {
+      background: var(--card-bg-preparo);
+      border: 1px solid color-mix(in srgb, var(--preparo-accent) 30%, transparent);
+    }
+    .col-pronto .num-card {
+      background: var(--card-bg-pronto);
+      border: 1px solid color-mix(in srgb, var(--pronto-accent) 35%, transparent);
+    }
+    .col-pronto .num-card::before {
+      content: '';
+      position: absolute; inset: 0; border-radius: 14px;
+      border: 1.5px solid color-mix(in srgb, var(--pronto-accent) 45%, transparent);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50%       { opacity: 0;   transform: scale(1.06); }
+    }
+
+    /* Nome como elemento principal */
+    .num-nome-principal {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 2rem; line-height: 1.05;
+      letter-spacing: -0.5px;
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .col-preparo .num-nome-principal { color: var(--card-text-preparo); }
+    .col-pronto  .num-nome-principal { color: var(--card-text-pronto); }
+
+    /* Número secundário, menor */
+    .num-id {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700; font-size: 1rem;
+      color: var(--muted); letter-spacing: 0.5px;
+    }
+
+    .num-tipo {
+      font-size: 0.6rem; padding: 2px 7px;
+      border-radius: 20px; font-weight: 700; margin-top: 3px;
+    }
+    .tipo-balcao   { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    .tipo-retirada { background: rgba(168,85,247,0.15);  color: #c084fc; }
+    .tipo-local    { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+
+    /* ── VAZIO ───────────────────────────────────────────── */
+    .col-empty {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px; height: 100%; color: var(--muted);
+      padding: 40px; text-align: center;
+    }
+    .empty-icon { font-size: 2.5rem; opacity: 0.4; }
+    .col-empty p { font-size: 0.88rem; opacity: 0.6; }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    .footer {
+      display: flex; align-items: center;
+      height: 42px; padding: 0 20px;
+      background: var(--bg-header);
+      border-top: 1px solid var(--border);
+    }
+    .footer-badge {
+      font-size: 0.72rem; font-weight: 700;
+      padding: 3px 10px; background: rgba(255,255,255,0.06);
+      border-radius: 20px; color: var(--muted); flex-shrink: 0;
+    }
+    .footer-msg {
+      flex: 1; padding: 0 20px; font-size: 0.8rem;
+      color: var(--muted); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .footer-status { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--muted); }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #22c55e; animation: blink 2s ease-in-out infinite;
+    }
+    .status-dot.offline { background: #ef4444; animation: none; }
+    @keyframes blink {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+
+    /* ── FLASH ───────────────────────────────────────────── */
+    .flash-overlay {
+      position: fixed; inset: 0; pointer-events: none; z-index: 9999; opacity: 0;
+    }
+    .flash-overlay.active { animation: flashIn 1.2s ease-out forwards; }
+    @keyframes flashIn {
+      0%   { opacity: 0.3; background: color-mix(in srgb, var(--pronto-accent) 20%, transparent); }
+      100% { opacity: 0; }
+    }
+
+    /* ── PAINEL DE CONFIGURAÇÕES ─────────────────────────── */
+    .cfg-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      z-index: 1000; display: none;
+      align-items: center; justify-content: center;
+    }
+    .cfg-backdrop.open { display: flex; }
+    .cfg-panel {
+      background: #1a2030; border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px; padding: 28px; width: 360px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .cfg-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.3rem; font-weight: 800; letter-spacing: 1px;
+      color: #fff; margin-bottom: 20px;
+    }
+    .cfg-group { margin-bottom: 18px; }
+    .cfg-label {
+      font-size: 0.75rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;
+      display: block;
+    }
+    .cfg-row { display: flex; align-items: center; gap: 10px; }
+    .cfg-row input[type="color"] {
+      width: 40px; height: 32px; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: none; cursor: pointer; padding: 2px;
+    }
+    .cfg-row input[type="text"] {
+      flex: 1; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px; padding: 7px 10px;
+      color: #fff; font-size: 0.82rem; font-family: 'Barlow', sans-serif;
+    }
+    .cfg-actions { display: flex; gap: 10px; margin-top: 22px; }
+    .cfg-btn {
+      flex: 1; padding: 10px; border-radius: 8px;
+      font-family: 'Barlow', sans-serif; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; border: none; letter-spacing: 0.5px;
+    }
+    .cfg-btn-save { background: #22c55e; color: #000; }
+    .cfg-btn-save:hover { background: #16a34a; }
+    .cfg-btn-reset { background: rgba(255,255,255,0.08); color: var(--text); }
+    .cfg-btn-reset:hover { background: rgba(255,255,255,0.14); }
+    .cfg-close {
+      position: absolute; top: 14px; right: 14px;
+      background: none; border: none; color: var(--muted);
+      font-size: 1.2rem; cursor: pointer;
+    }
+    .cfg-section-label {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 8px; margin-bottom: 14px;
+    }
+
+    /* Responsive */
+    @media (min-width: 1920px) {
+      .num-nome-principal { font-size: 2.6rem; }
+      .num-card  { min-height: 140px; }
+      .col-title { font-size: 1.8rem; }
+      .header-nome { font-size: 2rem; }
+    }
+    @media (max-width: 768px) {
+      .main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; height: calc(100vh - 70px - 42px); }
+      .col-preparo { border-right: none; border-bottom: 1px solid var(--border); }
+      .num-nome-principal { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="flash-overlay" id="flash"></div>
+
+<!-- ── HEADER ─────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-brand">
+    <img id="tela-logo" class="header-logo" src="" alt="Logo">
+    <div>
+      <div class="header-nome" id="tela-nome">PANEL DE TURNOS</div>
+      <div class="header-sub" id="hdr-sub">Retire su pedido cuando el número aparezca en <span style="color:#22c55e;font-weight:700">LISTO</span></div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-actions">
+      <button class="btn-hdr" id="btn-pt" onclick="setLang('pt')">PT</button>
+      <button class="btn-hdr active" id="btn-es" onclick="setLang('es')">ES</button>
+      <button class="btn-hdr btn-cores" onclick="abrirConfig()">🎨 Colores</button>
+    </div>
+    <div class="header-clock">
+      <div class="clock-time" id="clock-time">--:--</div>
+      <div class="clock-date" id="clock-date">---</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── COLUNAS ─────────────────────────────────────────── -->
+<div class="main">
+  <div class="col col-preparo">
+    <div class="col-header">
+      <div class="col-icon">🔥</div>
+      <div>
+        <div class="col-title" id="title-preparo">En Preparación</div>
+        <div class="col-subtitle" id="sub-preparo">Su pedido está siendo preparado</div>
+      </div>
+      <div class="col-count" id="count-preparo">0</div>
+    </div>
+    <div class="num-grid" id="grid-preparo">
+      <div class="col-empty">
+        <div class="empty-icon">🍽️</div>
+        <p id="empty-preparo">Ningún pedido en preparación</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col col-pronto">
+    <div class="col-header">
+      <div class="col-icon">✅</div>
+      <div>
+        <div class="col-title" id="title-pronto">Listo para Retirar</div>
+        <div class="col-subtitle" id="sub-pronto">Diríjase al mostrador</div>
+      </div>
+      <div class="col-count" id="count-pronto">0</div>
+    </div>
+    <div class="num-grid" id="grid-pronto">
+      <div class="col-empty">
+        <div class="empty-icon">🎉</div>
+        <p id="empty-pronto">Ningún pedido listo aún</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────── -->
+<div class="footer">
+  <div class="footer-badge">📋 Turnos</div>
+  <div class="footer-msg" id="footer-aviso">Cuando su número aparezca en VERDE, diríjase al mostrador para retirar su pedido.</div>
+  <div class="footer-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-txt">Conectado</span>
+  </div>
+</div>
+
+<!-- ── PAINEL DE CONFIGURAÇÕES ────────────────────────── -->
+<div class="cfg-backdrop" id="cfg-backdrop" onclick="if(event.target===this)fecharConfig()">
+  <div class="cfg-panel" style="position:relative">
+    <button class="cfg-close" onclick="fecharConfig()">✕</button>
+    <div class="cfg-title">⚙️ Personalizar Panel</div>
+ 
+    <!-- SEÇÃO: Em Preparo -->
+    <div class="cfg-section-label">🔥 Lado Izquierdo — En Preparación</div>
+ 
+    <div class="cfg-group">
+      <label class="cfg-label">Fondo de la columna</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-bg-preparo" oninput="syncPicker(this,'cfg-bg-preparo-hex')">
+        <input type="text"  id="cfg-bg-preparo-hex" maxlength="7" oninput="syncHex('cfg-bg-preparo','cfg-bg-preparo-hex')">
+      </div>
+    </div>
+    <div class="cfg-group">
+      <label class="cfg-label">Color de destaque (títulos, bordes)</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-preparo-accent" oninput="syncPicker(this,'cfg-preparo-accent-hex')">
+        <input type="text"  id="cfg-preparo-accent-hex" maxlength="7" oninput="syncHex('cfg-preparo-accent','cfg-preparo-accent-hex')">
+      </div>
+    </div>
+    <div class="cfg-group">
+      <label class="cfg-label">Fondo de las tarjetas</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-card-bg-preparo" oninput="syncPicker(this,'cfg-card-bg-preparo-hex')">
+        <input type="text"  id="cfg-card-bg-preparo-hex" maxlength="7" oninput="syncHex('cfg-card-bg-preparo','cfg-card-bg-preparo-hex')">
+      </div>
+    </div>
+    <div class="cfg-group">
+      <label class="cfg-label">Texto principal de las tarjetas (nombre/#)</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-card-text-preparo" oninput="syncPicker(this,'cfg-card-text-preparo-hex')">
+        <input type="text"  id="cfg-card-text-preparo-hex" maxlength="7" oninput="syncHex('cfg-card-text-preparo','cfg-card-text-preparo-hex')">
+      </div>
+    </div>
+ 
+    <!-- SEÇÃO: Pronto -->
+    <div class="cfg-section-label" style="margin-top:18px">✅ Lado Derecho — Listo</div>
+ 
+    <div class="cfg-group">
+      <label class="cfg-label">Fondo de la columna</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-bg-pronto" oninput="syncPicker(this,'cfg-bg-pronto-hex')">
+        <input type="text"  id="cfg-bg-pronto-hex" maxlength="7" oninput="syncHex('cfg-bg-pronto','cfg-bg-pronto-hex')">
+      </div>
+    </div>
+    <div class="cfg-group">
+      <label class="cfg-label">Color de destaque</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-pronto-accent" oninput="syncPicker(this,'cfg-pronto-accent-hex')">
+        <input type="text"  id="cfg-pronto-accent-hex" maxlength="7" oninput="syncHex('cfg-pronto-accent','cfg-pronto-accent-hex')">
+      </div>
+    </div>
+    <div class="cfg-group">
+      <label class="cfg-label">Fondo de las tarjetas</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-card-bg-pronto" oninput="syncPicker(this,'cfg-card-bg-pronto-hex')">
+        <input type="text"  id="cfg-card-bg-pronto-hex" maxlength="7" oninput="syncHex('cfg-card-bg-pronto','cfg-card-bg-pronto-hex')">
+      </div>
+    </div>
+    <div class="cfg-group">
+      <label class="cfg-label">Texto principal de las tarjetas</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-card-text-pronto" oninput="syncPicker(this,'cfg-card-text-pronto-hex')">
+        <input type="text"  id="cfg-card-text-pronto-hex" maxlength="7" oninput="syncHex('cfg-card-text-pronto','cfg-card-text-pronto-hex')">
+      </div>
+    </div>
+ 
+    <!-- SEÇÃO: Geral -->
+    <div class="cfg-section-label" style="margin-top:18px">🖥️ General</div>
+ 
+    <div class="cfg-group">
+      <label class="cfg-label">Fondo del encabezado y pie de página</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-bg-header" oninput="syncPicker(this,'cfg-bg-header-hex')">
+        <input type="text"  id="cfg-bg-header-hex" maxlength="7" oninput="syncHex('cfg-bg-header','cfg-bg-header-hex')">
+      </div>
+    </div>
+    <div class="cfg-group">
+      <label class="cfg-label">Fondo de los botones (PT / ES / ⚙️)</label>
+      <div class="cfg-row">
+        <input type="color" id="cfg-btn-bg" oninput="syncPicker(this,'cfg-btn-bg-hex')">
+        <input type="text"  id="cfg-btn-bg-hex" maxlength="7" oninput="syncHex('cfg-btn-bg','cfg-btn-bg-hex')">
+      </div>
+    </div>
+ 
+    <div class="cfg-actions">
+      <button class="cfg-btn cfg-btn-save" onclick="salvarCores()">💾 Guardar</button>
+      <button class="cfg-btn cfg-btn-reset" onclick="resetarCores()">↩ Predeterminado</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// IDIOMA
+// ═══════════════════════════════════════════════
+const STRINGS = {
+  pt: {
+    hdr_sub:       'Retire seu pedido quando o número aparecer em <span style="color:#22c55e;font-weight:700">PRONTO</span>',
+    title_preparo: 'Em Preparo',
+    sub_preparo:   'Seu pedido está sendo preparado',
+    title_pronto:  'Pronto para Retirar',
+    sub_pronto:    'Dirija-se ao balcão',
+    empty_preparo: 'Nenhum pedido em preparo',
+    empty_pronto:  'Nenhum pedido pronto ainda',
+    footer:        'Quando seu número aparecer em VERDE, dirija-se ao balcão para retirar seu pedido.',
+    conectado:     'Conectado',
+    reconectando:  'Reconectando...',
+    label_pedido:  'Pedido',
+    tipo_balcao:   '🏪 Balcão',
+    tipo_retirada: '🚶 Retirada',
+    tipo_local:    '🍽️ Local',
+    turnos_titulo: '— TURNOS',
+  },
+  es: {
+    hdr_sub:       'Retire su pedido cuando el número aparezca en <span style="color:#22c55e;font-weight:700">LISTO</span>',
+    title_preparo: 'En Preparación',
+    sub_preparo:   'Su pedido está siendo preparado',
+    title_pronto:  'Listo para Retirar',
+    sub_pronto:    'Diríjase al mostrador',
+    empty_preparo: 'Ningún pedido en preparación',
+    empty_pronto:  'Ningún pedido listo aún',
+    footer:        'Cuando su número aparezca en VERDE, diríjase al mostrador a retirar su pedido.',
+    conectado:     'Conectado',
+    reconectando:  'Reconectando...',
+    label_pedido:  'Pedido',
+    tipo_balcao:   '🏪 Mostrador',
+    tipo_retirada: '🚶 Retirada',
+    tipo_local:    '🍽️ Local',
+    turnos_titulo: '— TURNOS',
+  },
+};
+
+let _lang = localStorage.getItem('turnos_lang') || 'es';
+
+function setLang(l) {
+  _lang = l;
+  localStorage.setItem('turnos_lang', l);
+  document.getElementById('btn-pt').classList.toggle('active', l === 'pt');
+  document.getElementById('btn-es').classList.toggle('active', l === 'es');
+  aplicarIdioma();
+  renderizarPedidos(_ultimosDados);
+}
+
+function aplicarIdioma() {
+  const s = STRINGS[_lang];
+  document.getElementById('hdr-sub').innerHTML       = s.hdr_sub;
+  document.getElementById('title-preparo').textContent = s.title_preparo;
+  document.getElementById('sub-preparo').textContent  = s.sub_preparo;
+  document.getElementById('title-pronto').textContent = s.title_pronto;
+  document.getElementById('sub-pronto').textContent   = s.sub_pronto;
+  document.getElementById('footer-aviso').textContent = s.footer;
+  document.getElementById('status-txt').textContent   = s.conectado;
+  document.documentElement.lang = _lang === 'es' ? 'es' : 'pt-BR';
+}
+
+// ═══════════════════════════════════════════════
+// RELÓGIO
+// ═══════════════════════════════════════════════
+function atualizarRelogio() {
+  const agora = new Date();
+  const locale = 'es-PY';
+  document.getElementById('clock-time').textContent =
+    agora.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('clock-date').textContent =
+    agora.toLocaleDateString(locale, { weekday: 'long', day: '2-digit', month: 'long' });
+}
+setInterval(atualizarRelogio, 1000);
+
+// ═══════════════════════════════════════════════
+// CORES — sistema granular por elemento
+// ═══════════════════════════════════════════════
+
+// Mapa: id do input → CSS variable
+const COR_MAP = {
+  'cfg-bg-preparo':       '--bg-preparo',
+  'cfg-preparo-accent':   '--preparo-accent',
+  'cfg-card-bg-preparo':  '--card-bg-preparo',
+  'cfg-card-text-preparo':'--card-text-preparo',
+  'cfg-bg-pronto':        '--bg-pronto',
+  'cfg-pronto-accent':    '--pronto-accent',
+  'cfg-card-bg-pronto':   '--card-bg-pronto',
+  'cfg-card-text-pronto': '--card-text-pronto',
+  'cfg-bg-header':        '--bg-header',
+  'cfg-btn-bg':           '--btn-bg',
+};
+
+const DEFAULTS = {
+  'cfg-bg-preparo':        '#0a0f14',
+  'cfg-preparo-accent':    '#3b82f6',
+  'cfg-card-bg-preparo':   '#111820',
+  'cfg-card-text-preparo': '#3b82f6',
+  'cfg-bg-pronto':         '#0a0f14',
+  'cfg-pronto-accent':     '#22c55e',
+  'cfg-card-bg-pronto':    '#111820',
+  'cfg-card-text-pronto':  '#22c55e',
+  'cfg-bg-header':         '#0d1219',
+  'cfg-btn-bg':            '#1e2a38',
+};
+
+// Aplica um objeto { inputId: hexValue } nas CSS vars
+function aplicarCoresObj(obj) {
+  const r = document.documentElement.style;
+  for (const [id, val] of Object.entries(obj)) {
+    if (COR_MAP[id]) r.setProperty(COR_MAP[id], val);
+  }
+}
+
+// Lê todos os pickers, aplica em tempo real
+function aplicarCores() {
+  const obj = {};
+  for (const id of Object.keys(COR_MAP)) {
+    obj[id] = document.getElementById(id)?.value || DEFAULTS[id];
+  }
+  aplicarCoresObj(obj);
+}
+
+// Sincroniza picker → campo hex + aplica
+function syncPicker(picker, hexId) {
+  document.getElementById(hexId).value = picker.value;
+  aplicarCores();
+}
+
+// Sincroniza campo hex → picker + aplica (só quando hex válido)
+function syncHex(pickerId, hexId) {
+  const v = document.getElementById(hexId).value;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    document.getElementById(pickerId).value = v;
+    aplicarCores();
+  }
+}
+
+function carregarCoresSalvas() {
+  const saved = JSON.parse(localStorage.getItem('turnos_cores') || '{}');
+  const merged = { ...DEFAULTS, ...saved };
+  // Preenche pickers e campos hex
+  for (const [id, val] of Object.entries(merged)) {
+    const picker = document.getElementById(id);
+    const hex    = document.getElementById(id + '-hex');
+    if (picker) picker.value = val;
+    if (hex)    hex.value    = val;
+  }
+  aplicarCoresObj(merged);
+}
+
+function salvarCores() {
+  const obj = {};
+  for (const id of Object.keys(COR_MAP)) {
+    obj[id] = document.getElementById(id)?.value || DEFAULTS[id];
+  }
+  localStorage.setItem('turnos_cores', JSON.stringify(obj));
+  fecharConfig();
+}
+
+function resetarCores() {
+  localStorage.removeItem('turnos_cores');
+  carregarCoresSalvas();
+}
+
+function abrirConfig()  { document.getElementById('cfg-backdrop').classList.add('open'); }
+function fecharConfig() { document.getElementById('cfg-backdrop').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════
+// CARD
+// ═══════════════════════════════════════════════
+function _nomeDisplay(p) {
+  const raw = (p.cliente_nome || '').trim();
+  const limpo = raw
+    .replace(/^MESA\s+\d+\s*[-–]\s*/i, '')
+    .replace(/^BALC[ÃA]O\s*(KG)?\s*[-–]\s*/i, '')
+    .trim();
+  // "Cliente" e variantes são o valor padrão — tratar como sem nome
+  if (!limpo || /^cliente$/i.test(limpo)) return null;
+  return limpo;
+}
+
+function _card(p) {
+  const s = STRINGS[_lang];
+  const nome = _nomeDisplay(p);
+
+  // Se tem nome → nome em destaque grande, nº do pedido menor embaixo
+  // Se não tem nome → apenas o nº do pedido grande
+  const principal  = nome ? nome         : ('#' + p.id);
+  const secundario = nome ? ('#' + p.id) : '';
+
+  const tipoLabel = {
+    balcao:   s.tipo_balcao,
+    retirada: s.tipo_retirada,
+    local:    s.tipo_local,
+  }[p.tipo_entrega] || s.tipo_balcao;
+
+  const tipoCls = {
+    balcao:   'tipo-balcao',
+    retirada: 'tipo-retirada',
+    local:    'tipo-local',
+  }[p.tipo_entrega] || 'tipo-balcao';
+
+  return `<div class="num-card">
+    <div class="num-nome-principal">${principal}</div>
+    ${secundario ? `<div class="num-id">${secundario}</div>` : ''}
+    <div class="num-tipo ${tipoCls}">${tipoLabel}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// DADOS
+// ═══════════════════════════════════════════════
+let _prontoAnterior = new Set();
+let _ultimosDados   = [];
+
+// Tipos exibidos no painel: apenas pedidos feitos no balcão / retirada / local
+// Delivery é sempre roteado separado, não aparece aqui
+const TIPOS_PAINEL = ['balcao', 'retirada', 'local'];
+
+async function carregarPedidos() {
+  if (!window.supa) return;
+  try {
+    const { data } = await window.supa
+      .from('pedidos')
+      .select('id, uid_temporal, status, cliente_nome, tipo_entrega')
+      .in('status', ['em_preparo', 'pronto_entrega'])
+      .in('tipo_entrega', TIPOS_PAINEL)
+      .order('id', { ascending: true });
+
+    _ultimosDados = data || [];
+    renderizarPedidos(_ultimosDados);
+    setOnline(true);
+  } catch(e) {
+    console.error('Erro ao carregar pedidos:', e);
+    setOnline(false);
+  }
+}
+
+function renderizarPedidos(pedidos) {
+  const s = STRINGS[_lang];
+  const preparo = pedidos.filter(p => p.status === 'em_preparo');
+  const prontos  = pedidos.filter(p => p.status === 'pronto_entrega');
+
+  // Flash + som ao entrar novo pronto
+  const prontoIds = new Set(prontos.map(p => p.id));
+  let temNovoPronto = false;
+  prontoIds.forEach(id => { if (!_prontoAnterior.has(id)) temNovoPronto = true; });
+  _prontoAnterior = prontoIds;
+
+  if (temNovoPronto) {
+    const flash = document.getElementById('flash');
+    flash.classList.remove('active');
+    void flash.offsetWidth;
+    flash.classList.add('active');
+    try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play(); } catch(_){}
+  }
+
+  // Em Preparo
+  const gP = document.getElementById('grid-preparo');
+  document.getElementById('count-preparo').textContent = preparo.length;
+  gP.innerHTML = preparo.length
+    ? preparo.map(_card).join('')
+    : `<div class="col-empty"><div class="empty-icon">🍽️</div><p>${s.empty_preparo}</p></div>`;
+
+  // Pronto
+  const gR = document.getElementById('grid-pronto');
+  document.getElementById('count-pronto').textContent = prontos.length;
+  gR.innerHTML = prontos.length
+    ? prontos.map(_card).join('')
+    : `<div class="col-empty"><div class="empty-icon">🎉</div><p>${s.empty_pronto}</p></div>`;
+}
+
+function setOnline(ok) {
+  const s = STRINGS[_lang];
+  document.getElementById('status-dot').className = 'status-dot' + (ok ? '' : ' offline');
+  document.getElementById('status-txt').textContent = ok ? s.conectado : s.reconectando;
+}
+
+// ═══════════════════════════════════════════════
+// REALTIME com reconexão automática
+// ═══════════════════════════════════════════════
+let _realtimeChannel = null;
+
+function iniciarRealtime() {
+  if (!window.supa) return;
+  // Remove canal anterior se existir
+  if (_realtimeChannel) {
+    window.supa.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
+  }
+  _realtimeChannel = window.supa
+    .channel('turnos-pedidos-' + Date.now()) // nome único evita conflito de canais
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => {
+      carregarPedidos();
+    })
+    .subscribe(status => {
+      setOnline(status === 'SUBSCRIBED');
+      // Se falhar, tenta reconectar em 5s
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        setTimeout(iniciarRealtime, 5000);
+      }
+    });
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// INIT — espera window.supa estar pronto
+// ═══════════════════════════════════════════════
+carregarCoresSalvas();
+document.getElementById('btn-pt').classList.toggle('active', _lang === 'pt');
+document.getElementById('btn-es').classList.toggle('active', _lang === 'es');
+aplicarIdioma();
+atualizarRelogio();
+
+// Aguarda supa estar inicializado (supabaseClient.js carrega assíncrono)
+let _initTentativas = 0;
+function _aguardarSupa() {
+  if (window.supa) {
+    _initRestaurante();
+    carregarPedidos();
+    iniciarRealtime();
+    // Fallback polling: 5s (substitui o 15s original)
+    setInterval(carregarPedidos, 5000);
+    return;
+  }
+  _initTentativas++;
+  if (_initTentativas < 20) {
+    setTimeout(_aguardarSupa, 300); // tenta até 6s no total
+  } else {
+    console.warn('Turnos: supa não disponível após 6s');
+    setOnline(false);
+  }
+}
+_aguardarSupa();
+
+async function _initRestaurante() {
+  try {
+    const { data } = await window.supa.from('configuracoes')
+      .select('nome_restaurante, logo_url, aviso_delivery')
+      .maybeSingle();
+    if (!data) return;
+    if (data.nome_restaurante) {
+      document.getElementById('tela-nome').textContent =
+        data.nome_restaurante.toUpperCase() + ' — TURNOS';
+      document.title = data.nome_restaurante + ' | Turnos';
+    }
+    if (data.logo_url) {
+      const img = document.getElementById('tela-logo');
+      img.src = data.logo_url; img.style.display = 'block';
+    }
+    if (data.aviso_delivery) {
+      document.getElementById('footer-aviso').textContent = data.aviso_delivery;
+    }
+  } catch(e) { console.warn('Config:', e); }
+}
+</script>
+</body>
+</html>

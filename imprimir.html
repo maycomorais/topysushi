@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Comanda</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      background: #d0d0d0;
+      padding: 16px;
+    }
+
+    .ticket {
+      background: #fff;
+      max-width: 320px;
+      margin: 0 auto;
+      padding: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .topo { text-align: center; margin-bottom: 4px; }
+    .topo h3 { font-size: 16px; font-weight: 900; letter-spacing: 1px; }
+    .topo .num { font-size: 15px; font-weight: 700; }
+    .topo small { font-size: 11px; color: #555; }
+
+    hr { border: none; border-top: 1px dashed #000; margin: 5px 0; }
+
+    .info { font-size: 13px; line-height: 1.55; }
+    .info b { display: inline-block; width: 50px; font-size: 12px; }
+
+    .tipo-entrega { font-weight: 700; font-size: 14px; text-align: center; margin: 3px 0; }
+    .ref { font-size: 12px; margin-bottom: 3px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; border-bottom: 1px dashed #000; font-size: 12px; padding-bottom: 2px; }
+    td { vertical-align: top; padding: 3px 0; }
+    td.right { text-align: right; white-space: nowrap; }
+
+    .det { font-size: 13px; color: #444; display: block; line-height: 1.4; }
+    .det-obs { font-size: 13px; font-weight: 700; color: #c0392b; display: block; }
+
+    .totais { text-align: right; font-size: 13px; line-height: 1.7; margin-top: 4px; }
+    .total-final { font-size: 17px; font-weight: 900; }
+
+    .pag { font-size: 13px; font-weight: 700; }
+    .pag-obs { font-size: 13px; margin-top: 2px; line-height: 1.4; }
+
+    .rodape { text-align: center; font-size: 11px; margin-top: 4px; }
+
+    .btn-print {
+      display: block; width: 100%; padding: 14px;
+      background: #1a7a2e; color: white; border: none;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      margin-top: 16px; border-radius: 8px;
+      font-family: Arial, sans-serif;
+    }
+
+    @media print {
+      body { background: none; padding: 0; font-size: 13px; }
+      .btn-print { display: none; }
+      .ticket { box-shadow: none; max-width: 100%; width: 100%; padding: 1mm; }
+      @page { margin: 2mm; size: 58mm auto; }
+
+      .topo h3 { font-size: 15px; }
+      .topo .num { font-size: 14px; }
+      .tipo-entrega { font-size: 14px; }
+      table, td { font-size: 13px; }
+      th { font-size: 12px; }
+      .det { font-size: 13px; }
+      .totais { font-size: 13px; }
+      .total-final { font-size: 16px; }
+      .pag { font-size: 13px; }
+      .pag-obs { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ticket">
+    <div class="topo">
+      <img id="logo-ticket" src="" alt="Logo" style="display:none;max-width:70px;max-height:50px;object-fit:contain;margin-bottom:4px">
+      <h3 id="nome-loja-ticket">RESTAURANTE</h3>
+      <div class="num">PEDIDO #<span id="id-pedido">---</span></div>
+      <small id="data-hora">---</small>
+    </div>
+    <hr>
+
+    <div class="info">
+      <div><b>Cliente:</b> <span id="nome">---</span></div>
+      <div><b>Tel:</b> <span id="tel">---</span></div>
+    </div>
+    <hr>
+
+    <div class="tipo-entrega" id="tipo-entrega">---</div>
+    <div class="ref" id="endereco-box" style="display:none">Ref: <span id="ref-entrega">---</span></div>
+    <hr>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:13%">Cant.</th>
+          <th>Ítem</th>
+          <th class="right">Total</th>
+        </tr>
+      </thead>
+      <tbody id="lista-itens">
+        <tr><td colspan="3" style="text-align:center;padding:8px">Cargando...</td></tr>
+      </tbody>
+    </table>
+    <hr>
+
+    <div class="totais">
+      <div>Subtotal: <span id="subtotal">Gs 0</span></div>
+      <div id="row-desconto" style="display:none;color:#e74c3c">Descuento: -<span id="desconto">Gs 0</span></div>
+      <div id="row-frete" style="display:none">Envío: <span id="frete">Gs 0</span></div>
+      <div class="total-final">TOTAL: <span id="total-geral">Gs 0</span></div>
+    </div>
+    <hr>
+
+    <div class="pag" id="forma-pag">---</div>
+    <div class="pag-obs" id="obs-pag"></div>
+
+    <div id="box-factura" style="display:none;margin-top:6px;border:1px dashed #000;padding:4px;font-size:12px">
+      <b>FACTURA:</b> RUC: <span id="ruc">---</span> | <span id="razao">---</span>
+    </div>
+
+    <hr>
+    <div class="rodape">*** MUCHAS GRACIAS ***</div>
+  </div>
+
+  <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR</button>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+  <script>
+    window.onload = function () {
+      // Tenta carregar nome do restaurante do banco
+      (async function() {
+        try {
+          if (window.supa) {
+            const { data } = await window.supa.from('configuracoes').select('nome_restaurante, logo_url').maybeSingle();
+            if (data && data.nome_restaurante) {
+              const el = document.getElementById('nome-loja-ticket');
+              if (el) el.textContent = data.nome_restaurante.toUpperCase();
+            }
+            if (data && data.logo_url) {
+              const logoEl = document.getElementById('logo-ticket');
+              if (logoEl) { logoEl.src = data.logo_url; logoEl.style.display = 'block'; }
+            }
+          }
+        } catch(e) { /* ignora — imprime sem nome */ }
+      })();
+
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get('d');
+      if (!raw) {
+        document.body.innerHTML = '<p style="color:red;text-align:center;margin-top:40px">Enlace inválido.</p>';
+        return;
+      }
+
+      try {
+        const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = b64.length % 4;
+        const json = decodeURIComponent(escape(atob(pad ? b64 + '='.repeat(4 - pad) : b64)));
+        const p = JSON.parse(json);
+
+        document.getElementById('id-pedido').textContent  = p.id || 'S/N';
+        document.getElementById('data-hora').textContent  = p.data || new Date().toLocaleString('es-PY');
+        document.getElementById('nome').textContent       = p.cliente?.nome || 'Cliente';
+        document.getElementById('tel').textContent        = p.cliente?.tel  || 'S/N';
+
+        const tipo = p.entrega?.tipo || 'delivery';
+        document.getElementById('tipo-entrega').textContent = tipo.toUpperCase();
+        if (tipo === 'delivery') {
+          document.getElementById('endereco-box').style.display = 'block';
+          document.getElementById('ref-entrega').textContent = p.entrega?.ref || 'No informado';
+        }
+
+        // Itens
+        const tbody = document.getElementById('lista-itens');
+        tbody.innerHTML = '';
+        const itens = Array.isArray(p.itens) ? p.itens : [];
+
+        itens.forEach(function(item, idx) {
+          var qtd    = item.q != null ? item.q : (item.qtd != null ? item.qtd : 1);
+          var nome   = item.n || item.nome || ('Ítem ' + (idx + 1));
+          var preco  = parseFloat(item.p != null ? item.p : (item.preco != null ? item.preco : 0)) || 0;
+          var isKg   = item._isKg || (item.peso_gramas > 0);
+          var pesoG  = item.peso_gramas || 0;
+          var pesofmt = isKg
+            ? (pesoG >= 1000
+               ? (pesoG / 1000).toFixed(3).replace(/\.?0+$/, '').replace('.', ',') + ' kg'
+               : pesoG + 'g')
+            : null;
+
+          // variação/tipo: campo t, tipo ou variacao
+          var variacao  = item.t || item.variacao || item.tipo || '';
+          var preparo   = item.pr || item.preparo || '';
+          // montagem: campo m, montagem — pode ser array de strings ou array de objetos
+          var montagemRaw = item.m || item.montagem || [];
+          var obs       = item.o || item.obs || '';
+
+          var det = '';
+
+          // Variação (tamanho de pizza, size de shake, etc.)
+          if (variacao && variacao !== nome && variacao !== 'Estándar' && variacao !== 'Armado')
+            det += '<span class="det">▸ ' + variacao + '</span>';
+
+          // Preparo
+          if (preparo)
+            det += '<span class="det">🍳 ' + preparo + '</span>';
+
+          // Montagem/etapas/sabores — normaliza: cada item pode ser string ou objeto {nome}
+          if (Array.isArray(montagemRaw) && montagemRaw.length > 0) {
+            montagemRaw.forEach(function(l) {
+              var txt = (typeof l === 'object' && l !== null) ? (l.nome || JSON.stringify(l)) : String(l);
+              if (txt) det += '<span class="det">· ' + txt + '</span>';
+            });
+          }
+
+          // Obs
+          if (obs)
+            det += '<span class="det-obs">⚠ ' + obs + '</span>';
+
+          var totalItem = (preco * (isKg ? 1 : qtd)).toLocaleString('es-PY');
+
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td style="vertical-align:top">' + (isKg ? '<b>' + pesofmt + '</b>' : qtd + 'x') + '</td>' +
+            '<td>' + nome + det + '</td>' +
+            '<td class="right">Gs ' + totalItem + '</td>';
+          tbody.appendChild(tr);
+        });
+
+        // Totais
+        var v = p.valores || {};
+        var frete    = v.frete || v.frete_cobrado_cliente || 0;
+        var desconto = v.desconto || v.desconto_cupom || 0;
+        var subtotal = v.sub || v.subtotal || 0;
+
+        document.getElementById('subtotal').textContent    = 'Gs ' + subtotal.toLocaleString('es-PY');
+        document.getElementById('total-geral').textContent = 'Gs ' + (v.total || v.total_geral || 0).toLocaleString('es-PY');
+
+        if (desconto > 0) {
+          document.getElementById('row-desconto').style.display = '';
+          document.getElementById('desconto').textContent = 'Gs ' + desconto.toLocaleString('es-PY');
+        }
+        if (frete > 0) {
+          document.getElementById('row-frete').style.display = '';
+          document.getElementById('frete').textContent = 'Gs ' + frete.toLocaleString('es-PY');
+        }
+
+        // Pagamento
+        var pg  = p.pagamento || {};
+        var met = pg.metodo || pg.forma_pagamento || 'No informado';
+        var obsp = pg.obs   || pg.obs_pagamento   || '';
+
+        if (met === 'Multipagamento') {
+          document.getElementById('forma-pag').textContent = '🔀 Pago dividido:';
+          try {
+            var partes = JSON.parse(obsp);
+            document.getElementById('obs-pag').innerHTML = partes.map(function(x, i) {
+              var l = (i + 1) + '. ' + x.metodo + ': Gs ' + parseFloat(x.valor).toLocaleString('es-PY');
+              if (x.troco) l += ' (Vuelto p/ ' + x.troco + ')';
+              return l;
+            }).join('<br>');
+          } catch(e) { document.getElementById('obs-pag').textContent = obsp; }
+        } else {
+          document.getElementById('forma-pag').textContent = met;
+          document.getElementById('obs-pag').textContent   = obsp;
+        }
+
+        // Factura
+        if (p.factura && (p.factura.ruc || p.factura.razao)) {
+          document.getElementById('box-factura').style.display = 'block';
+          document.getElementById('ruc').textContent   = p.factura.ruc   || 'S/N';
+          document.getElementById('razao').textContent = p.factura.razao || 'S/N';
+        }
+
+        // Auto-print
+        setTimeout(function() { window.print(); }, 600);
+
+      } catch(e) {
+        console.error(e);
+        document.body.innerHTML =
+          '<p style="color:red;text-align:center;margin-top:40px">Error al leer el pedido.<br><small>' + e.message + '</small></p>';
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a7a2e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Atención — Mozo</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <audio id="som-pronto" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    <source src="https://freesound.org/data/previews/320/320655_5260872-lq.mp3" type="audio/mpeg">
+  </audio>
+  <style id="main-styles">
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--primary:#1a7a2e;--primary2:#155c24;--accent:#f39c12;--danger:#e74c3c;--info:#0891b2;--bg:#f4f4f4;--card:#fff;--border:#e0e0e0;--text:#333;--text2:#666;--hh:56px;--tbh:54px;--ch:38px;--carth:64px}
+    html,body{height:100%;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+
+    /* LOGIN */
+    #login-screen{position:fixed;inset:0;background:var(--primary);display:flex;align-items:center;justify-content:center;z-index:9999}
+    .login-box{background:#fff;border-radius:20px;padding:32px 28px;width:100%;max-width:380px;text-align:center}
+    .login-box img{width:72px;height:72px;border-radius:14px;object-fit:cover;margin-bottom:12px}
+    .login-box h2{font-size:1.3rem;margin-bottom:4px;color:var(--primary)}
+    .login-box p{font-size:.82rem;color:var(--text2);margin-bottom:20px}
+    .login-input{width:100%;padding:12px 14px;margin-bottom:12px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;font-family:Arial,sans-serif}
+    .login-input:focus{outline:none;border-color:var(--primary)}
+    .login-btn{width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:800;cursor:pointer;margin-top:4px}
+    .login-err{color:var(--danger);font-size:.82rem;margin-top:8px;display:none}
+
+    /* LOADING */
+    #loading{position:fixed;inset:0;background:rgba(255,255,255,.96);z-index:8000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+    .spinner{width:46px;height:46px;border:4px solid #eee;border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* HEADER */
+    .header{position:fixed;top:0;left:0;right:0;height:var(--hh);background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 12px;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+    .header-logo{font-size:.95rem;font-weight:800;display:flex;align-items:center;gap:8px}
+    .header-logo img{width:34px;height:34px;border-radius:8px;object-fit:cover}
+    .garcom-badge{background:rgba(255,255,255,.2);border-radius:8px;padding:4px 10px;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap}
+    .btn-sair{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 10px;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap}
+
+    /* COMANDA BAR */
+    .comanda-bar{position:fixed;top:var(--hh);left:0;right:0;background:#fff;border-bottom:2px solid var(--border);padding:7px 10px;z-index:190;display:flex;align-items:center;gap:6px;height:var(--tbh)}
+    .comanda-bar .lbl{font-size:.72rem;color:var(--text2);font-weight:700;white-space:nowrap}
+    .comanda-bar input{flex:1;max-width:120px;padding:7px 10px;border:2px solid var(--border);border-radius:8px;font-size:1rem;font-weight:700;text-align:center}
+    .comanda-bar input:focus{outline:none;border-color:var(--primary)}
+    .btn-scan{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 10px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+    .comanda-badge{background:var(--primary);color:#fff;border-radius:8px;padding:5px 10px;font-size:.78rem;font-weight:700;white-space:nowrap}
+
+    /* CAT NAV */
+    .cat-nav{position:fixed;top:calc(var(--hh) + var(--tbh));left:0;right:0;height:var(--ch);background:#fff;border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap;padding:5px 8px;z-index:180;scrollbar-width:none}
+    .cat-nav::-webkit-scrollbar{display:none}
+    .cat-chip{display:inline-block;margin-right:6px;padding:4px 12px;border-radius:20px;background:#f0f0f0;color:var(--text2);font-size:.78rem;font-weight:700;cursor:pointer;border:2px solid transparent}
+    .cat-chip.active{background:var(--primary);color:#fff}
+
+    /* MAIN */
+    .main{margin-top:calc(var(--hh) + var(--tbh) + var(--ch));padding:8px 8px calc(var(--carth) + 20px)}
+    .cat-header{font-size:.88rem;font-weight:800;color:var(--primary);margin:10px 0 6px;padding-left:8px;border-left:3px solid var(--primary)}
+    .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+    .prod-card{background:var(--card);border-radius:12px;border:1.5px solid var(--border);overflow:hidden;cursor:pointer;transition:transform .1s}
+    .prod-card:active{transform:scale(.96)}
+    .prod-card-img{width:100%;height:82px;object-fit:cover;display:block}
+    .prod-card-noimg{width:100%;height:82px;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);display:flex;align-items:center;justify-content:center;font-size:1.8rem}
+    .prod-card-body{padding:5px 7px 7px}
+    .prod-card-nome{font-size:.78rem;font-weight:700;line-height:1.2;margin-bottom:3px}
+    .prod-card-preco{font-size:.84rem;font-weight:800;color:var(--primary)}
+    .prod-card-kg{font-size:.66rem;background:var(--info);color:#fff;border-radius:4px;padding:1px 4px;display:inline-block;margin-bottom:2px}
+
+    /* CART BAR */
+    .cart-bar{position:fixed;bottom:0;left:0;right:0;height:var(--carth);background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:200;cursor:pointer;box-shadow:0 -2px 12px rgba(0,0,0,.15)}
+    .cart-bar .cb-count{background:var(--accent);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800}
+    .cart-bar .cb-label{font-size:.93rem;font-weight:700;flex:1;padding-left:10px}
+    .cart-bar .cb-total{font-size:.97rem;font-weight:800}
+    .cart-bar.empty{opacity:.45;pointer-events:none}
+
+    /* OVERLAYS */
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;align-items:flex-end;justify-content:center}
+    .overlay.active{display:flex}
+    .sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;max-height:93vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,0)}
+    .sheet-handle{width:40px;height:4px;background:#ddd;border-radius:2px;margin:10px auto 0}
+    .sheet-header{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:1}
+    .sheet-header h3{font-size:.98rem;font-weight:800}
+    .btn-close{background:#f0f0f0;border:none;width:30px;height:30px;border-radius:50%;font-size:1rem;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center}
+
+    /* MODAL PRODUTO */
+    .opcoes-group{padding:10px 14px 0}
+    .opcoes-group-label{font-size:.76rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+    .opcao-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:9px 12px;margin-bottom:6px;background:#f9f9f9;border:2px solid var(--border);border-radius:10px;cursor:pointer;font-size:.86rem;font-weight:600}
+    .opcao-btn.selected{border-color:var(--primary);background:#f0fbf3}
+    .opcao-preco{color:var(--primary);font-weight:700}
+    .obs-area{padding:10px 14px 0}
+    .obs-area label{font-size:.76rem;font-weight:700;color:var(--text2);display:block;margin-bottom:5px}
+    .obs-area textarea{width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;resize:none;height:58px;font-family:Arial,sans-serif}
+    .modal-actions{display:flex;align-items:center;gap:10px;padding:10px 14px 14px;position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border)}
+    .stepper{display:flex;align-items:center;gap:7px;flex-shrink:0}
+    .stepper button{width:32px;height:32px;border-radius:50%;border:2px solid var(--primary);background:#fff;color:var(--primary);font-size:1.1rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .stepper span{font-size:.95rem;font-weight:800;min-width:22px;text-align:center}
+    .btn-add{flex:1;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:.92rem;font-weight:800;cursor:pointer}
+
+    /* KG MODAL */
+    .kg-display{background:#ecfeff;border:2px solid #a5f3fc;border-radius:14px;padding:12px;text-align:center;margin:10px 14px 0}
+    .kg-display .kg-num{font-size:2.2rem;font-weight:800;color:var(--info)}
+    .kg-preco-preview{background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:9px 14px;margin:8px 14px 0;display:flex;justify-content:space-between;align-items:center}
+    .kg-preco-preview.hidden{display:none}
+    .kg-val{font-size:1.3rem;font-weight:800;color:#16a34a}
+    #kg-input{width:calc(100% - 28px);margin:9px 14px 0;display:block;padding:9px 12px;border:2px solid var(--info);border-radius:10px;font-size:1.3rem;font-weight:700;text-align:center;color:var(--info)}
+
+    /* CART MODAL */
+    .cart-item-row{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid #f5f5f5}
+    .cart-item-info{flex:1}
+    .cart-item-info strong{font-size:.88rem}
+    .cart-item-info small{color:var(--text2);display:block;font-size:.72rem}
+    .cart-item-preco{font-weight:700;color:var(--primary);font-size:.86rem;white-space:nowrap;padding:0 9px}
+    .btn-remove{background:#ffeaea;color:var(--danger);border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:.78rem}
+    .cart-form{padding:10px 14px}
+    .cart-form label{font-size:.76rem;font-weight:700;color:var(--text2);display:block;margin-bottom:3px;margin-top:9px}
+    .cart-form input,.cart-form select{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:.92rem;font-family:Arial,sans-serif}
+    .cart-form input:focus,.cart-form select:focus{outline:none;border-color:var(--primary)}
+    .cart-total-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-top:2px solid var(--border);font-size:1.05rem;font-weight:800}
+    .btn-lancar{margin:0 14px 14px;width:calc(100% - 28px);padding:14px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:.97rem;font-weight:800;cursor:pointer}
+    .btn-lancar:disabled{opacity:.5}
+
+    /* MULTI PAG */
+    #box-multi-atend{display:none;margin-top:8px}
+    .multi-parte-card{background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:8px;margin-bottom:7px}
+    .multi-parte-row{display:flex;gap:7px;align-items:center}
+    .multi-parte-row select,.multi-parte-row input{flex:1;padding:7px;border:1.5px solid var(--border);border-radius:7px;font-size:.82rem}
+
+    /* BANNER PRONTO */
+    #banner-pronto{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:8000;align-items:center;justify-content:center;flex-direction:column}
+    #banner-pronto.show{display:flex}
+    .pronto-card{background:#fff;border-radius:24px;width:90%;max-width:380px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35);animation:prontoIn .35s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes prontoIn{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+    .pronto-top{background:linear-gradient(135deg,#16a34a,#15803d);padding:28px 20px 20px;text-align:center;color:#fff}
+    .pronto-icon{font-size:3.5rem;margin-bottom:8px;animation:ring .6s ease .2s infinite alternate}
+    @keyframes ring{from{transform:rotate(-8deg)}to{transform:rotate(8deg)}}
+    .pronto-top h2{font-size:1.4rem;font-weight:900;margin-bottom:4px}
+    .pronto-top p{font-size:.88rem;opacity:.88}
+    .pronto-pedidos{padding:16px 20px;max-height:260px;overflow-y:auto}
+    .pronto-item{display:flex;align-items:center;justify-content:space-between;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin-bottom:8px}
+    .pronto-num{font-size:1.4rem;font-weight:900;color:#16a34a}
+    .pronto-info{flex:1;padding:0 12px}
+    .pronto-info strong{font-size:.9rem;display:block}
+    .pronto-info small{color:var(--text2);font-size:.76rem}
+    .btn-entregar{background:#16a34a;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-weight:800;font-size:.82rem;cursor:pointer;white-space:nowrap}
+    .btn-fechar-banner{width:calc(100% - 40px);margin:0 20px 20px;padding:12px;background:#fff;color:var(--text2);border:1.5px solid var(--border);border-radius:12px;font-weight:700;cursor:pointer;font-size:.9rem}
+
+    /* SCANNER */
+    .scan-area{padding:20px 16px;text-align:center}
+    .scan-status{background:#f0f0f0;border-radius:9px;padding:9px 14px;font-size:.83rem;font-weight:700;color:var(--text2);margin-bottom:10px}
+    .scan-status.ok{background:#f0fdf4;color:#16a34a}
+    .scan-status.err{background:#fef2f2;color:var(--danger)}
+    #scan-hidden-input{position:absolute;left:-9999px;opacity:0;width:1px;height:1px}
+
+    /* TOAST */
+    #atend-toast{position:fixed;bottom:calc(var(--carth) + 10px);left:50%;transform:translateX(-50%);background:#1a7a2e;color:#fff;padding:9px 22px;border-radius:30px;font-size:.9rem;font-weight:700;z-index:9999;pointer-events:none;display:none;white-space:nowrap}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <img id="atend-login-logo" src="" alt="Logo" style="display:none;width:72px;height:72px;border-radius:14px;object-fit:cover;margin-bottom:12px">
+    <h2 id="atend-login-nome">Atención</h2>
+    <p>Panel de Mozos — inicie sesión para atender</p>
+    <input class="login-input" type="email" id="l-email" placeholder="Correo electrónico" autocomplete="email">
+    <input class="login-input" type="password" id="l-senha" placeholder="Contraseña" autocomplete="current-password">
+    <button class="login-btn" id="l-btn" onclick="fazerLogin()">INICIAR SESIÓN</button>
+    <div class="login-err" id="l-err"></div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading"><div class="spinner"></div><p style="color:#666;font-weight:600">Cargando menú...</p></div>
+
+<!-- HEADER -->
+<header class="header" id="app-header" style="display:none">
+  <div class="header-logo">
+    <img id="atend-header-logo" src="" alt="Logo" style="display:none;width:34px;height:34px;border-radius:8px;object-fit:cover">
+    <span id="atend-header-nome">Atención</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <div class="garcom-badge"><i class="fas fa-user-tie"></i> <span id="hd-garcom">Mozo</span></div>
+    <button class="btn-sair" onclick="fazerLogout()"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</header>
+
+<!-- COMANDA BAR -->
+<div class="comanda-bar" id="app-comanda" style="display:none">
+  <span class="lbl">Mesa:</span>
+  <input type="text" id="inp-comanda" placeholder="Nº" inputmode="numeric" oninput="atualizarBadgeComanda()">
+  <div class="comanda-badge" id="badge-comanda" style="display:none"></div>
+  <button class="btn-scan" onclick="abrirScanner()"><i class="fas fa-barcode"></i> Scan</button>
+</div>
+
+<!-- CATS -->
+<nav class="cat-nav" id="cat-nav" style="display:none"></nav>
+
+<!-- MAIN -->
+<main class="main" id="main-content" style="display:none">
+  <p style="text-align:center;color:#aaa;padding:40px">Cargando...</p>
+</main>
+
+<!-- CART BAR -->
+<div class="cart-bar empty" id="cart-bar" onclick="abrirCarrinho()" style="display:none">
+  <div class="cb-count" id="cb-count">0</div>
+  <div class="cb-label">Ver pedido</div>
+  <div class="cb-total" id="cb-total">Gs 0</div>
+</div>
+
+<div id="atend-toast"></div>
+
+<!-- RODAPÉ FIXO — pedido pronto (persiste após fechar banner) -->
+<div id="footer-pronto" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;background:#27ae60;color:#fff;padding:10px 16px;display:none;align-items:center;justify-content:space-between;box-shadow:0 -2px 12px rgba(0,0,0,0.15)">
+  <span id="footer-pronto-txt" style="font-weight:700;font-size:0.9rem"></span>
+  <button onclick="document.getElementById('banner-pronto').classList.add('show')"
+    style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.82rem">
+    Ver pedidos
+  </button>
+</div>
+
+<!-- BANNER PRONTO -->
+<div id="banner-pronto">
+  <div class="pronto-card">
+    <div class="pronto-top">
+      <div class="pronto-icon">🔔</div>
+      <h2>¡Pedido Listo!</h2>
+      <p>Retire de la cocina y entregue al cliente</p>
+    </div>
+    <div class="pronto-pedidos" id="pronto-lista"></div>
+    <button class="btn-fechar-banner" onclick="fecharBannerPronto()">Cerrar aviso</button>
+  </div>
+</div>
+
+<!-- MODAL PRODUTO -->
+<div class="overlay" id="modal-prod">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><h3 id="mp-title">Producto</h3><button class="btn-close" onclick="fecharModalProd()">x</button></div>
+    <div id="mp-img-wrap"></div>
+    <div style="padding:10px 14px 0"><p id="mp-desc" style="font-size:.84rem;color:var(--text2)"></p></div>
+    <div id="mp-opcoes"></div>
+    <div class="obs-area"><label>Observación (opcional)</label><textarea id="mp-obs" placeholder="Ej: Sin cebolla, a punto..."></textarea></div>
+    <div class="modal-actions">
+      <div class="stepper"><button onclick="mpQtd(-1)">-</button><span id="mp-qty">1</span><button onclick="mpQtd(+1)">+</button></div>
+      <button class="btn-add" onclick="mpAdicionar()">Agregar - Gs <span id="mp-preco-txt">0</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL KG -->
+<div class="overlay" id="modal-kg">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><h3 id="kg-title">Por Kg</h3><button class="btn-close" onclick="fecharModalKg()">x</button></div>
+    <div>
+      <div style="text-align:center;font-size:.76rem;color:var(--info);margin:6px 14px 0;font-weight:700" id="kg-preco-ref"></div>
+      <div class="kg-display"><div class="kg-num" id="kg-display">-</div><div style="font-size:.72rem;color:#0e7490;margin-top:2px">Peso</div></div>
+      <input type="number" id="kg-input" min="1" step="1" placeholder="Gramos (ej: 300)" oninput="kgAtualizar()" onkeydown="if(event.key==='Enter')kgAdicionar()">
+      <div class="kg-preco-preview hidden" id="kg-preview"><span style="font-size:.83rem;color:#166534">Total:</span><span class="kg-val" id="kg-val">Gs 0</span></div>
+    </div>
+    <div class="modal-actions"><button class="btn-add" id="kg-btn" onclick="kgAdicionar()" disabled style="opacity:.5">Confirmar peso</button></div>
+  </div>
+</div>
+
+<!-- MODAL CARRINHO -->
+<div class="overlay" id="modal-cart">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><h3>Pedido</h3><button class="btn-close" onclick="fecharCarrinho()">x</button></div>
+    <div id="cart-lista"></div>
+    <div class="cart-total-row"><span>Total</span><span id="cart-total-val">Gs 0</span></div>
+    <div class="cart-form">
+      <label>Mesa / Comanda <small style="font-weight:400;color:#aaa">(opcional)</small></label>
+      <input type="text" id="cart-mesa" placeholder="Nº de mesa o comanda" inputmode="numeric">
+      <label>Cliente <small style="font-weight:400;color:#aaa">(opcional)</small></label>
+      <input type="text" id="cart-cliente" placeholder="Nombre del cliente">
+      <label>Pago</label>
+      <select id="cart-pag" onchange="cartPagChange()">
+        <option value="Efectivo">Efectivo</option>
+        <option value="Tarjeta">Tarjeta</option>
+        <option value="Transferencia">Alias / Transferencia</option>
+        <option value="Multipagamento">Dividir Pago</option>
+      </select>
+      <div id="box-multi-atend">
+        <button type="button" onclick="cartVoltarUnico()" style="width:100%;padding:8px;background:#eef4ff;color:#2980b9;border:1.5px solid #2980b9;border-radius:8px;font-weight:700;cursor:pointer;font-size:.8rem;margin-top:7px">Usar pago único</button>
+        <div id="multi-partes-atend" style="margin-top:7px"></div>
+        <button type="button" onclick="cartAddParte()" style="width:100%;padding:8px;background:#f8f9fa;color:#555;border:1.5px dashed #ccc;border-radius:8px;font-weight:600;cursor:pointer;font-size:.8rem;margin-top:4px">+ Agregar forma</button>
+        <div id="multi-status-atend" style="display:none;padding:8px 12px;border-radius:8px;margin-top:6px;font-weight:700;font-size:.83rem"></div>
+      </div>
+    </div>
+    <button class="btn-lancar" id="btn-lancar" onclick="lancarPedido()">🚀 ENVIAR A LA COCINA</button>
+  </div>
+</div>
+
+<!-- MODAL SCANNER -->
+<div class="overlay" id="modal-scanner">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header"><h3>Lector de Comanda</h3><button class="btn-close" onclick="fecharScanner()">x</button></div>
+    <div class="scan-area">
+      <div style="font-size:3.5rem;margin-bottom:10px">&#x1F50D;</div>
+      <p style="font-size:.87rem;color:var(--text2);margin-bottom:14px;line-height:1.5">Apunte el lector láser al código de la comanda.<br>El número se captura automáticamente.</p>
+      <div class="scan-status" id="scan-status">Esperando lectura...</div>
+      <div id="scan-last" style="font-size:.76rem;color:var(--text2);margin-top:6px"></div>
+      <input id="scan-hidden-input" type="text" autocomplete="off" onkeydown="scanKeydown(event)" oninput="scanInput(event)">
+      <button onclick="document.getElementById('scan-hidden-input').focus()" style="padding:11px 22px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;margin-top:8px">Activar lector</button>
+      <p style="font-size:.72rem;color:#aaa;margin-top:9px">O ingrese manualmente en el campo Mesa arriba.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="supabaseClient.js"></script>
+<script>
+// =========================================================
+// ATEND.JS — Painel do Garçom
+// =========================================================
+
+// -- Globals
+var MENU_ATEND = {}, CATS_ATEND = [], carrinho = [];
+var _prodAtual = null, _mpQty = 1, _mpVariacao = null;
+var _catFiltro = 'todos', _kgProd = null, _kgPreco = 0;
+var _multiCont = 0, _scanBuffer = '', _scanTimer = null;
+var _garcomId = null, _garcomNome = null;
+var _prontoVisto = new Set(), _prontoLoop = null;
+var _audioOk = false, _alarmeProntoLoop = null;
+
+// =========================================================
+// AUTH
+// =========================================================
+document.addEventListener('DOMContentLoaded', async function() {
+  var session = (await supa.auth.getSession()).data.session;
+  if (session) await iniciarApp(session);
+  document.body.addEventListener('click', function() {
+    if (_audioOk) return;
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var buf = ctx.createBuffer(1, ctx.sampleRate*0.001, ctx.sampleRate);
+      var src = ctx.createBufferSource();
+      src.buffer = buf; src.connect(ctx.destination); src.start(0);
+      src.onended = function() { _audioOk = true; ctx.close(); };
+    } catch(e) { _audioOk = true; }
+  }, { once: true });
+});
+
+async function fazerLogin() {
+  var email = document.getElementById('l-email').value.trim();
+  var senha = document.getElementById('l-senha').value;
+  var errEl = document.getElementById('l-err');
+  var btn = document.getElementById('l-btn');
+  errEl.style.display = 'none';
+  if (!email || !senha) { errEl.textContent = 'Ingrese correo y contraseña.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Iniciando sesión...';
+  var result = await supa.auth.signInWithPassword({ email: email, password: senha });
+  if (result.error) {
+    errEl.textContent = 'Correo o contraseña incorrectos.'; errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'INICIAR SESIÓN'; return;
+  }
+  await iniciarApp(result.data.session);
+}
+
+async function iniciarApp(session) {
+  var perfilRes = await supa.from('perfis_acesso').select('cargo, nome_display').eq('id', session.user.id).single();
+  var perfil = perfilRes.data;
+  _garcomId   = session.user.id;
+  _garcomNome = (perfil && perfil.nome_display) ? perfil.nome_display : session.user.email;
+
+  // Carrega identidade da loja do banco
+  var cfgRes = await supa.from('configuracoes').select('nome_restaurante, logo_url, icone_url, cor_primaria').maybeSingle();
+  var cfg = cfgRes.data || {};
+  var nomeApp = cfg.nome_restaurante || 'Atención';
+  var logoUrl = cfg.logo_url || cfg.icone_url || '';
+  // Aplica nome
+  var elNomeHeader = document.getElementById('atend-header-nome');
+  var elNomeLogin  = document.getElementById('atend-login-nome');
+  if (elNomeHeader) elNomeHeader.textContent = nomeApp;
+  if (elNomeLogin)  elNomeLogin.textContent  = nomeApp;
+  // Aplica logo
+  if (logoUrl) {
+    ['atend-header-logo','atend-login-logo'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) { el.src = logoUrl; el.style.display = 'inline-block'; }
+    });
+  }
+  // Aplica cor primária
+  if (cfg.cor_primaria) {
+    document.documentElement.style.setProperty('--primary', cfg.cor_primaria);
+    document.documentElement.style.setProperty('--primary2', cfg.cor_primaria);
+  }
+  // Atualiza title
+  document.title = 'Atención — ' + nomeApp;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('loading').style.display = 'flex';
+  ['app-header','app-comanda','cat-nav','main-content','cart-bar'].forEach(function(id) {
+    document.getElementById(id).style.display = '';
+  });
+  document.getElementById('hd-garcom').textContent = _garcomNome;
+  try { await carregarDados(); }
+  finally { document.getElementById('loading').style.display = 'none'; }
+  iniciarPollingPronto();
+}
+
+async function fazerLogout() {
+  if (_prontoLoop) clearInterval(_prontoLoop);
+  await supa.auth.signOut();
+  location.reload();
+}
+
+// =========================================================
+// CARDAPIO
+// =========================================================
+async function carregarDados() {
+  var catsRes = await supa.from('categorias').select('*').order('ordem');
+  var prodsRes = await supa.from('produtos').select('*').eq('ativo', true).order('nome');
+  CATS_ATEND = catsRes.data || [];
+  MENU_ATEND = {};
+  (prodsRes.data || []).forEach(function(p) {
+    // FILTRO: nao mostrar produtos exclusivos do PDV/balcao
+    if (p.somente_balcao) return;
+    var cat = p.categoria_slug || 'outros';
+    if (!MENU_ATEND[cat]) MENU_ATEND[cat] = [];
+    MENU_ATEND[cat].push(p);
+  });
+  renderCats(); renderProdutos();
+}
+
+function renderCats() {
+  var nav = document.getElementById('cat-nav'); nav.innerHTML = '';
+  var chip0 = document.createElement('span'); chip0.className = 'cat-chip active';
+  chip0.textContent = 'Todos'; chip0.onclick = function() { filtrarCat('todos', chip0); };
+  nav.appendChild(chip0);
+  var ordemCats = CATS_ATEND.map(function(c) { return c.slug; });
+  Object.keys(MENU_ATEND).sort(function(a,b) {
+    var ia=ordemCats.indexOf(a), ib=ordemCats.indexOf(b);
+    if(ia===-1&&ib===-1) return a.localeCompare(b);
+    if(ia===-1) return 1; if(ib===-1) return -1;
+    return ia-ib;
+  }).forEach(function(slug) {
+    var catInfo = CATS_ATEND.find(function(c){ return c.slug===slug; });
+    var chip = document.createElement('span'); chip.className = 'cat-chip';
+    chip.textContent = catInfo ? catInfo.nome_exibicao : slug;
+    chip.dataset.slug = slug;
+    chip.onclick = function() { filtrarCat(slug, chip); };
+    nav.appendChild(chip);
+  });
+}
+
+function filtrarCat(slug, el) {
+  _catFiltro = slug;
+  document.querySelectorAll('.cat-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active'); renderProdutos();
+}
+
+function renderProdutos() {
+  var main = document.getElementById('main-content'); main.innerHTML = '';
+  var ordemCats = CATS_ATEND.map(function(c){ return c.slug; });
+  var slugs = Object.keys(MENU_ATEND).sort(function(a,b) {
+    var ia=ordemCats.indexOf(a), ib=ordemCats.indexOf(b);
+    if(ia===-1&&ib===-1) return a.localeCompare(b);
+    if(ia===-1) return 1; if(ib===-1) return -1;
+    return ia-ib;
+  });
+  var temAlgo = false;
+  slugs.forEach(function(slug) {
+    if (_catFiltro !== 'todos' && slug !== _catFiltro) return;
+    var prods = MENU_ATEND[slug];
+    if (!prods || !prods.length) return;
+    temAlgo = true;
+    var catInfo = CATS_ATEND.find(function(c){ return c.slug===slug; });
+    var h = document.createElement('div'); h.className = 'cat-header';
+    h.textContent = catInfo ? catInfo.nome_exibicao : slug;
+    main.appendChild(h);
+    var grid = document.createElement('div'); grid.className = 'prod-grid';
+    prods.forEach(function(p){ grid.appendChild(criarCard(p)); });
+    main.appendChild(grid);
+  });
+  if (!temAlgo) main.innerHTML = '<p style="text-align:center;color:#aaa;padding:40px">Ningún producto encontrado</p>';
+}
+
+function criarCard(p) {
+  var cfg = p.montagem_config;
+  var isKg = cfg && !Array.isArray(cfg) && cfg.__tipo === 'kg';
+  var precoKg = isKg ? (cfg.preco_kg || p.preco || 0) : 0;
+  var card = document.createElement('div'); card.className = 'prod-card';
+  card.onclick = function(){ abrirProd(p); };
+  var img = p.imagem_url
+    ? '<img class="prod-card-img" src="'+p.imagem_url+'" alt="'+p.nome+'" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=prod-card-noimg>&#x1F37D;&#xFE0F;</div>\'">'
+    : '<div class="prod-card-noimg">&#x1F37D;&#xFE0F;</div>';
+  var kgBadge = isKg ? '<div class="prod-card-kg">kg</div>' : '';
+  var precoTxt = isKg
+    ? 'Gs '+(precoKg).toLocaleString('es-PY')+'<span style="font-size:.68em;font-weight:500">/kg</span>'
+    : 'Gs '+((p.preco||0)).toLocaleString('es-PY');
+  card.innerHTML = img+'<div class="prod-card-body">'+kgBadge+'<div class="prod-card-nome">'+p.nome+'</div><div class="prod-card-preco" style="'+(isKg?'color:var(--info)':'')+'">'+precoTxt+'</div></div>';
+  return card;
+}
+
+// =========================================================
+// MODAL PRODUTO
+// =========================================================
+function abrirProd(p) {
+  var cfg = p.montagem_config;
+  var isKg = cfg && !Array.isArray(cfg) && cfg.__tipo === 'kg';
+  if (isKg) { abrirModalKg(p, cfg.preco_kg || p.preco || 0); return; }
+  _prodAtual = p; _mpQty = 1; _mpVariacao = null;
+  document.getElementById('mp-title').textContent = p.nome;
+  document.getElementById('mp-desc').textContent  = p.descricao || '';
+  document.getElementById('mp-obs').value = '';
+  var wrap = document.getElementById('mp-img-wrap');
+  wrap.innerHTML = p.imagem_url ? '<img src="'+p.imagem_url+'" style="width:100%;max-height:170px;object-fit:cover" onerror="this.style.display=\'none\'">' : '';
+  var opc = document.getElementById('mp-opcoes'); opc.innerHTML = '';
+  var tipo = cfg && !Array.isArray(cfg) && cfg.__tipo;
+  if (tipo === 'variacoes' && cfg.variacoes) {
+    var ativas = cfg.variacoes.filter(function(v){ return v.ativo !== false; });
+    if (ativas.length) {
+      var g = document.createElement('div'); g.className = 'opcoes-group';
+      g.innerHTML = '<div class="opcoes-group-label">Seleccione la opción</div>';
+      ativas.forEach(function(v) {
+        var btn = document.createElement('button'); btn.className = 'opcao-btn';
+        btn.innerHTML = '<span>'+v.nome+'</span><span class="opcao-preco">Gs '+((v.preco||p.preco||0)).toLocaleString('es-PY')+'</span>';
+        btn.onclick = function() {
+          document.querySelectorAll('#mp-opcoes .opcao-btn').forEach(function(b){ b.classList.remove('selected'); });
+          btn.classList.add('selected'); _mpVariacao = v; atualizarPrecoModal();
+        };
+        g.appendChild(btn);
+      });
+      opc.appendChild(g);
+    }
+  }
+  atualizarPrecoModal();
+  document.getElementById('modal-prod').classList.add('active');
+}
+function fecharModalProd(){ document.getElementById('modal-prod').classList.remove('active'); }
+function atualizarPrecoModal() {
+  if (!_prodAtual) return;
+  var preco = _mpVariacao ? (_mpVariacao.preco || _prodAtual.preco) : (_prodAtual.preco || 0);
+  document.getElementById('mp-preco-txt').textContent = (preco * _mpQty).toLocaleString('es-PY');
+}
+function mpQtd(d){ _mpQty=Math.max(1,(_mpQty||1)+d); document.getElementById('mp-qty').textContent=_mpQty; atualizarPrecoModal(); }
+function mpAdicionar() {
+  if (!_prodAtual) return;
+  var cfg=_prodAtual.montagem_config, tipo=cfg&&!Array.isArray(cfg)&&cfg.__tipo;
+  if (tipo==='variacoes') {
+    var ativas=(cfg.variacoes||[]).filter(function(v){ return v.ativo!==false; });
+    if (ativas.length && !_mpVariacao) { toast('Seleccione una opción'); return; }
+  }
+  var preco = _mpVariacao ? (_mpVariacao.preco || _prodAtual.preco) : (_prodAtual.preco||0);
+  var variacao = _mpVariacao ? _mpVariacao.nome : '';
+  var obs = document.getElementById('mp-obs').value.trim();
+  var existe = !obs && carrinho.find(function(i){ return i._id===_prodAtual.id && i.variacao===variacao && !i._isKg; });
+  if (existe) { existe.qtd += _mpQty; }
+  else {
+    carrinho.push({ _id:_prodAtual.id, nome:_prodAtual.nome, preco:preco, qtd:_mpQty, variacao:variacao, obs:obs, categoria_slug:_prodAtual.categoria_slug||'' });
+  }
+  atualizarCartBar(); fecharModalProd();
+  toast(_prodAtual.nome+' agregado');
+}
+
+// =========================================================
+// MODAL KG
+// =========================================================
+function abrirModalKg(p, precoKg){
+  _kgProd=p; _kgPreco=precoKg;
+  document.getElementById('kg-title').textContent=p.nome;
+  document.getElementById('kg-preco-ref').textContent='Gs '+precoKg.toLocaleString('es-PY')+' / kg';
+  document.getElementById('kg-display').textContent='-';
+  document.getElementById('kg-input').value='';
+  document.getElementById('kg-preview').classList.add('hidden');
+  document.getElementById('kg-btn').disabled=true; document.getElementById('kg-btn').style.opacity='.5';
+  document.getElementById('modal-kg').classList.add('active');
+  setTimeout(function(){ document.getElementById('kg-input').focus(); }, 100);
+}
+function fecharModalKg(){ document.getElementById('modal-kg').classList.remove('active'); }
+function kgAtualizar(){
+  var g=parseInt(document.getElementById('kg-input').value)||0;
+  if (g>0) {
+    var fmt=g>=1000?(g/1000).toFixed(3).replace(/\.?0+$/,'').replace('.',',')+' kg':g+'g';
+    document.getElementById('kg-display').textContent=fmt;
+    document.getElementById('kg-val').textContent='Gs '+Math.round(_kgPreco*g/1000).toLocaleString('es-PY');
+    document.getElementById('kg-preview').classList.remove('hidden');
+    document.getElementById('kg-btn').disabled=false; document.getElementById('kg-btn').style.opacity='1';
+  } else {
+    document.getElementById('kg-display').textContent='-';
+    document.getElementById('kg-preview').classList.add('hidden');
+    document.getElementById('kg-btn').disabled=true; document.getElementById('kg-btn').style.opacity='.5';
+  }
+}
+function kgAdicionar(){
+  var g=parseInt(document.getElementById('kg-input').value)||0;
+  if (!g||!_kgProd) return;
+  carrinho.push({ _id:_kgProd.id+'_kg_'+Date.now(), nome:_kgProd.nome, preco:Math.round(_kgPreco*g/1000), qtd:1, variacao:'', obs:'', _isKg:true, peso_gramas:g, preco_kg:_kgPreco, categoria_slug:_kgProd.categoria_slug||'' });
+  atualizarCartBar(); fecharModalKg();
+  toast(_kgProd.nome+' agregado');
+}
+
+// =========================================================
+// CARRINHO
+// =========================================================
+function atualizarCartBar(){
+  var qtd=carrinho.reduce(function(a,i){return a+i.qtd;},0);
+  var tot=carrinho.reduce(function(a,i){return a+i.preco*i.qtd;},0);
+  document.getElementById('cb-count').textContent=qtd;
+  document.getElementById('cb-total').textContent='Gs '+tot.toLocaleString('es-PY');
+  document.getElementById('cart-bar').classList.toggle('empty', qtd===0);
+  // Atualiza label do botão lançar conforme conteúdo do carrinho
+  var btn=document.getElementById('btn-lancar');
+  if (btn) {
+    var _soKg=carrinho.length>0&&carrinho.every(function(i){return i._isKg;});
+    var _soBebida=carrinho.length>0&&carrinho.every(ehBebida);
+    if (_soKg) btn.textContent='⚖️ REGISTRAR VENTA KG';
+    else if (_soBebida) btn.textContent='🍺 ENVIAR BEBIDAS';
+    else btn.textContent='🚀 ENVIAR A LA COCINA';
+  }
+}
+function abrirCarrinho(){
+  if (!carrinho.length) return;
+  renderCartLista();
+  var m=document.getElementById('inp-comanda').value.trim();
+  if (m) document.getElementById('cart-mesa').value=m;
+  document.getElementById('modal-cart').classList.add('active');
+}
+function fecharCarrinho(){ document.getElementById('modal-cart').classList.remove('active'); }
+function renderCartLista(){
+  var lista=document.getElementById('cart-lista'); lista.innerHTML='';
+  var tot=0;
+  carrinho.forEach(function(item, idx){
+    tot+=item.preco*item.qtd;
+    var row=document.createElement('div'); row.className='cart-item-row';
+    var g=item.peso_gramas||0;
+    var qtdTxt=item._isKg?(g>=1000?(g/1000).toFixed(3).replace(/\.?0+$/,'').replace('.',',')+' kg':g+'g'):item.qtd+'x';
+    row.innerHTML='<div class="cart-item-info"><strong>'+qtdTxt+' '+item.nome+'</strong>'+(item.variacao?'<small>'+item.variacao+'</small>':'')+(item.obs?'<small style="color:#e74c3c">'+item.obs+'</small>':'')+'</div><div class="cart-item-preco">Gs '+(item.preco*item.qtd).toLocaleString('es-PY')+'</div><button class="btn-remove" onclick="removerItem('+idx+')">X</button>';
+    lista.appendChild(row);
+  });
+  document.getElementById('cart-total-val').textContent='Gs '+tot.toLocaleString('es-PY');
+}
+function removerItem(idx){
+  carrinho.splice(idx,1); atualizarCartBar();
+  if (!carrinho.length){ fecharCarrinho(); return; }
+  renderCartLista();
+}
+
+// PAGAMENTO
+function cartPagChange(){
+  var pag=document.getElementById('cart-pag').value;
+  var box=document.getElementById('box-multi-atend');
+  box.style.display=pag==='Multipagamento'?'block':'none';
+  if(pag==='Multipagamento'&&!document.querySelectorAll('[id^="mpa-parte-"]').length){ cartAddParte(); cartAddParte(); cartAtualizarMulti(); }
+}
+function cartVoltarUnico(){ document.getElementById('cart-pag').value='Efetivo'; document.getElementById('box-multi-atend').style.display='none'; document.getElementById('multi-partes-atend').innerHTML=''; _multiCont=0; }
+function cartAddParte(){
+  _multiCont++;
+  var id=_multiCont;
+  var opts=['Efetivo','Cartao','Pix','Transferencia'].map(function(v){return '<option value="'+v+'">'+v+'</option>';}).join('');
+  var div=document.createElement('div'); div.className='multi-parte-card'; div.id='mpa-parte-'+id;
+  div.innerHTML='<div style="font-size:.7rem;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:5px">'+id+'a FORMA</div><div class="multi-parte-row"><select id="mpa-met-'+id+'" onchange="cartAtualizarMulti()"><option value="">Selecionar...</option>'+opts+'</select><input type="number" id="mpa-val-'+id+'" placeholder="0" min="0" step="1000" oninput="cartAtualizarMulti()">'+(id>2?'<button onclick="document.getElementById(\'mpa-parte-'+id+'\').remove();cartAtualizarMulti()" style="background:#ffeaea;color:#e74c3c;border:none;padding:5px 8px;border-radius:6px;cursor:pointer">X</button>':'')+'</div>';
+  document.getElementById('multi-partes-atend').appendChild(div); cartAtualizarMulti();
+}
+function cartAtualizarMulti(){
+  var total=carrinho.reduce(function(a,i){return a+i.preco*i.qtd;},0);
+  var inputs=[].slice.call(document.querySelectorAll('[id^="mpa-val-"]'));
+  var soma=0; inputs.forEach(function(inp){soma+=parseFloat(inp.value)||0;});
+  var vazios=inputs.filter(function(inp){return !inp.value||!parseFloat(inp.value);});
+  if(vazios.length===1&&total-soma>0){vazios[0].value=total-soma;soma=total;}
+  var bar=document.getElementById('multi-status-atend'), diff=total-soma;
+  bar.style.display='block';
+  if(Math.abs(diff)<1){bar.style.cssText='display:block;padding:8px 12px;border-radius:8px;background:#eafaf1;border:1.5px solid #27ae60;font-weight:700;font-size:.82rem;color:#27ae60;margin-top:6px';bar.textContent='Total coberto: Gs '+total.toLocaleString('es-PY');}
+  else if(diff>0){bar.style.cssText='display:block;padding:8px 12px;border-radius:8px;background:#fff8e6;border:1.5px solid #f0a500;font-weight:700;font-size:.82rem;color:#e67e22;margin-top:6px';bar.textContent='Faltam: Gs '+diff.toLocaleString('es-PY');}
+  else{bar.style.cssText='display:block;padding:8px 12px;border-radius:8px;background:#fdf3f3;border:1.5px solid #e74c3c;font-weight:700;font-size:.82rem;color:#e74c3c;margin-top:6px';bar.textContent='Excede: Gs '+Math.abs(diff).toLocaleString('es-PY');}
+}
+function cartColetarMulti(){
+  var partes=[];
+  document.querySelectorAll('[id^="mpa-parte-"]').forEach(function(div){
+    var id=div.id.replace('mpa-parte-','');
+    var met=(document.getElementById('mpa-met-'+id)||{}).value||'';
+    var val=parseFloat((document.getElementById('mpa-val-'+id)||{}).value)||0;
+    if(met&&val>0) partes.push({metodo:met,valor:val});
+  });
+  return partes;
+}
+
+// =========================================================
+// LANCAR PEDIDO
+// =========================================================
+function ehBebida(item){
+  var cat=(item.categoria_slug||'').toLowerCase();
+  return cat.indexOf('bebida')>=0||cat.indexOf('drink')>=0;
+}
+
+async function lancarPedido(){
+  if (!carrinho.length) return;
+  var btn=document.getElementById('btn-lancar');
+  btn.disabled=true; btn.textContent='Salvando...';
+  var mesa=document.getElementById('cart-mesa').value.trim();
+  var cli=document.getElementById('cart-cliente').value.trim()||'Cliente';
+  var pag=document.getElementById('cart-pag').value;
+  var _soKg=carrinho.every(function(i){return i._isKg;});
+  var _soBebida=carrinho.every(ehBebida);
+  var obsPag='Atendimento';
+  if (pag==='Multipagamento') {
+    var partes=cartColetarMulti();
+    if (!partes.length){ toast('Adicione formas de pagamento'); btn.disabled=false; btn.textContent='🚀 LANÇAR NA COZINHA'; return; }
+    var totalPed=carrinho.reduce(function(a,i){return a+i.preco*i.qtd;},0);
+    var somaP=partes.reduce(function(a,p){return a+p.valor;},0);
+    if(Math.abs(somaP-totalPed)>1){ toast('Total das formas nao bate'); btn.disabled=false; btn.textContent='🚀 LANÇAR NA COZINHA'; return; }
+    obsPag=JSON.stringify(partes);
+  }
+  var nomeFinal=mesa?'MESA '+mesa+' - '+cli:(_soKg?'BALCAO KG - '+cli:'BALCAO - '+cli);
+  var total=carrinho.reduce(function(a,i){return a+i.preco*i.qtd;},0);
+  var agora=new Date().toISOString();
+  // Status: kg=entregue | bebidas=pronto_entrega | normal=em_preparo
+  var statusFinal=_soKg?'entregue':_soBebida?'pronto_entrega':'em_preparo';
+  var novosItens=carrinho.map(function(i){
+    return Object.assign({ id:i._id+'_'+Date.now()+Math.random(), nome:i.nome, preco:i.preco, qtd:i.qtd, variacao:i.variacao||'', obs:i.obs||'', categoria_slug:i.categoria_slug||'', montagem:[], status_item:'pendente', lancado_em:agora }, i._isKg?{peso_gramas:i.peso_gramas,preco_kg:i.preco_kg,_isKg:true}:{});
+  });
+  var pedido={
+    uid_temporal:'AT-'+Math.floor(Math.random()*9999),
+    status:statusFinal, tipo_entrega:'balcao',
+    total_geral:total, subtotal:total, frete_cobrado_cliente:0,
+    forma_pagamento:pag, obs_pagamento:obsPag,
+    itens:novosItens,
+    endereco_entrega:mesa?'Mesa '+mesa:(_soKg?'Balcao - Venda Kg':'Balcao'),
+    cliente_nome:nomeFinal, cliente_telefone:'',
+    garcom_id:_garcomId, garcom_nome:_garcomNome,
+    tempo_recebido:agora, tempo_confirmado:agora, tempo_preparo_iniciado:agora
+  };
+  if (_soKg){ pedido.tempo_pronto=agora; pedido.tempo_entregue=agora; }
+  try {
+    var res=await supa.from('pedidos').insert([pedido]).select('id').single();
+    if (res.error) throw res.error;
+    if (res.data&&res.data.id) {
+      // Se o pedido foi lançado diretamente como pronto_entrega (bebidas ou kg),
+      // marcar como "já visto" para não disparar o banner desnecessariamente
+      if (statusFinal === 'pronto_entrega' || statusFinal === 'entregue') {
+        _prontoVisto.add(res.data.id);
+      }
+      var dadosImp={id:res.data.id,cliente:{nome:nomeFinal,tel:''},entrega:{tipo:'balcao',ref:pedido.endereco_entrega},
+        itens:novosItens.map(function(i){return{q:i.qtd,n:i.nome,p:i.preco,t:i.variacao||'',pr:'',m:i.montagem||[],o:i.obs||'',peso_gramas:i.peso_gramas,_isKg:i._isKg};}),
+        valores:{sub:total,frete:0,total:total},pagamento:{metodo:pag,obs:obsPag},garcom:_garcomNome,data:new Date().toLocaleString('es-PY')};
+      var b64=btoa(unescape(encodeURIComponent(JSON.stringify(dadosImp)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      window.open('imprimir.html?d='+b64,'PrintAtend','width=400,height=600');
+    }
+    carrinho=[]; atualizarCartBar(); fecharCarrinho();
+    document.getElementById('cart-mesa').value='';
+    document.getElementById('cart-cliente').value='';
+    document.getElementById('cart-pag').value='Efectivo';
+    document.getElementById('box-multi-atend').style.display='none';
+    document.getElementById('multi-partes-atend').innerHTML='';
+    _multiCont=0;
+    var msgs={entregue:'¡Venta por Kg registrada!',pronto_entrega:'¡Solo bebidas - directo al mostrador!',em_preparo:'¡Enviado a la Cocina!'};
+    toast(msgs[statusFinal]||'¡Pedido enviado!');
+  } catch(e) {
+    toast('Error: '+e.message); console.error(e);
+  } finally {
+    btn.disabled=false; btn.textContent='🚀 ENVIAR A LA COCINA';
+  }
+}
+
+// =========================================================
+// POLLING PEDIDOS PRONTOS
+// =========================================================
+function iniciarPollingPronto(){ verificarProntos(); _prontoLoop=setInterval(verificarProntos, 8000); }
+
+async function verificarProntos(){
+  if (!_garcomId) return;
+  var res=await supa.from('pedidos').select('id,uid_temporal,cliente_nome,itens,endereco_entrega')
+    .eq('garcom_id',_garcomId).eq('status','pronto_entrega');
+  if (!res.data||!res.data.length) return;
+  var novos=res.data.filter(function(p){ return !_prontoVisto.has(p.id); });
+  if (!novos.length) return;
+  tocarAlarmePronto();
+  exibirBannerPronto(novos);
+  novos.forEach(function(p){ _prontoVisto.add(p.id); });
+}
+
+function tocarAlarmePronto(){
+  if (_alarmeProntoLoop) return;
+  var audio=document.getElementById('som-pronto');
+  if (!audio) return;
+  function _tocar(){ audio.currentTime=0; audio.play().catch(function(){}); }
+  _tocar();
+  _alarmeProntoLoop=setInterval(_tocar,4000);
+  setTimeout(pararAlarmePronto, 30000);
+}
+function pararAlarmePronto(){
+  if(_alarmeProntoLoop){clearInterval(_alarmeProntoLoop);_alarmeProntoLoop=null;}
+  var audio=document.getElementById('som-pronto');
+  if(audio&&!audio.paused){audio.pause();audio.currentTime=0;}
+}
+
+function exibirBannerPronto(pedidos){
+  var lista=document.getElementById('pronto-lista'); lista.innerHTML='';
+  pedidos.forEach(function(p){
+    var num=p.uid_temporal||('#'+p.id);
+    var qtdItens=(p.itens||[]).length;
+    var ref=p.endereco_entrega||'Balcão';
+    var card=document.createElement('div'); card.className='pronto-item';
+    card.innerHTML='<div class="pronto-num">'+num+'</div>'
+      +'<div class="pronto-info"><strong>'+(p.cliente_nome||'Cliente')+'</strong>'
+      +'<small>'+ref+' — '+qtdItens+' item(s)</small></div>'
+      +'<button class="btn-entregar" onclick="marcarEntregue('+p.id+', this)">Entreguei</button>';
+    lista.appendChild(card);
+  });
+  document.getElementById('banner-pronto').classList.add('show');
+
+  // Atualiza rodapé fixo
+  _atualizarFooterPronto();
+}
+
+function _atualizarFooterPronto() {
+  var footer = document.getElementById('footer-pronto');
+  if (!footer) return;
+  var itens = document.querySelectorAll('#pronto-lista .pronto-item');
+  if (!itens.length) { footer.style.display='none'; return; }
+  footer.style.display = 'flex';
+  footer.querySelector('#footer-pronto-txt').textContent =
+    '🔔 ' + itens.length + ' pedido(s) pronto(s) para entregar';
+}
+
+function fecharBannerPronto(){
+  document.getElementById('banner-pronto').classList.remove('show');
+  pararAlarmePronto();
+  // Footer permanece visível enquanto houver pedidos prontos
+  _atualizarFooterPronto();
+}
+
+async function marcarEntregue(pedidoId, btnEl){
+  btnEl.disabled=true; btnEl.textContent='...';
+  var agora=new Date().toISOString();
+  var res=await supa.from('pedidos').update({status:'entregue',tempo_entregue:agora}).eq('id',pedidoId);
+  if (res.error){ btnEl.disabled=false; btnEl.textContent='Entreguei'; toast('Erro ao marcar'); return; }
+  btnEl.closest('.pronto-item').remove();
+  toast('Pedido entregue!');
+  _atualizarFooterPronto();
+  if (!document.querySelectorAll('#pronto-lista .pronto-item').length) fecharBannerPronto();
+}
+
+// =========================================================
+// COMANDA / SCANNER
+// =========================================================
+function atualizarBadgeComanda(){
+  var v=document.getElementById('inp-comanda').value.trim();
+  var badge=document.getElementById('badge-comanda');
+  if(v){badge.textContent='Mesa '+v;badge.style.display='';}else{badge.style.display='none';}
+}
+function abrirScanner(){
+  document.getElementById('modal-scanner').classList.add('active');
+  setTimeout(function(){var inp=document.getElementById('scan-hidden-input');inp.value='';inp.focus();},200);
+}
+function fecharScanner(){ document.getElementById('modal-scanner').classList.remove('active'); }
+function scanInput(e){
+  clearTimeout(_scanTimer); _scanBuffer=e.target.value;
+  _scanTimer=setTimeout(function(){if(_scanBuffer.trim())processarScan(_scanBuffer.trim());e.target.value='';_scanBuffer='';},300);
+}
+function scanKeydown(e){
+  if(e.key==='Enter'){clearTimeout(_scanTimer);var codigo=e.target.value.trim();e.target.value='';_scanBuffer='';if(codigo)processarScan(codigo);}
+}
+function processarScan(codigo){
+  var num=codigo.replace(/\D/g,'');
+  var st=document.getElementById('scan-status');
+  if(!num){st.className='scan-status err';st.textContent='Codigo invalido: "'+codigo+'"';return;}
+  document.getElementById('inp-comanda').value=num;
+  document.getElementById('cart-mesa').value=num;
+  atualizarBadgeComanda();
+  st.className='scan-status ok';st.textContent='Comanda '+num+' lida!';
+  document.getElementById('scan-last').textContent='Ultima: '+codigo+' -> Mesa '+num;
+  setTimeout(fecharScanner,1200);
+  toast('Comanda '+num+' selecionada');
+}
+
+// =========================================================
+// UTILS
+// =========================================================
+function toast(msg, ms){
+  ms=ms||2500;
+  var el=document.getElementById('atend-toast');
+  el.textContent=msg; el.style.display='block';
+  clearTimeout(el._t); el._t=setTimeout(function(){el.style.display='none';},ms);
+}
+document.querySelectorAll('.overlay').forEach(function(ov){
+  ov.addEventListener('click',function(e){if(e.target===ov)ov.classList.remove('active');});
+});
+</script>
+</body>
+</html>

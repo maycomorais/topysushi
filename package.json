@@ -1,0 +1,15 @@
+{
+  "name": "gaveta-bridge",
+  "version": "1.0.0",
+  "description": "Ponte local para gaveta DC-335 via Ethernet",
+  "main": "drawer-bridge.js",
+  "bin": "drawer-bridge.js",
+  "pkg": {
+    "targets": ["node18-win-x64"],
+    "outputPath": "dist",
+    "assets": []
+  },
+  "scripts": {
+    "build": "pkg drawer-bridge.js --target node18-win-x64 --output dist/gaveta-bridge.exe --compress GZip"
+  }
+}

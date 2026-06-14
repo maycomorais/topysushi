@@ -1,0 +1,41 @@
+{
+  "name": "Nome do Restaurante",
+  "short_name": "Restaurante",
+  "description": "Cardápio e pedidos online",
+  "version": "1.6.0",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#1a7a2e",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "https://crjuqiwhgqpzmkyyzgvn.supabase.co/storage/v1/object/public/produtos/icone-loja.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://crjuqiwhgqpzmkyyzgvn.supabase.co/storage/v1/object/public/produtos/icone-loja.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "shopping"],
+  "shortcuts": [
+    {
+      "name": "Fazer Pedido",
+      "short_name": "Pedido",
+      "url": "/index.html",
+      "icons": [
+        {
+          "src": "https://crjuqiwhgqpzmkyyzgvn.supabase.co/storage/v1/object/public/produtos/icone-loja.jpg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

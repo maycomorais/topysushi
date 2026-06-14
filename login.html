@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green:       #1a7a2e;
+      --green-dark:  #155e24;
+      --red:         #dc2626;
+      --gray-50:     #f9fafb;
+      --gray-100:    #f3f4f6;
+      --gray-200:    #e5e7eb;
+      --gray-400:    #9ca3af;
+      --gray-600:    #4b5563;
+      --gray-800:    #1f2937;
+      --mono:        'IBM Plex Mono', monospace;
+      --sans:        'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--sans);
+      background: #0f1a12;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(26,122,46,0.25) 0%, transparent 60%),
+        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231a7a2e' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .login-wrap { width: 100%; max-width: 420px; animation: fadeUp 0.5s ease both; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    .login-card {
+      background: #fff; border-radius: 20px; padding: 40px 36px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4), 0 0 0 1px rgba(26,122,46,0.15);
+      text-align: center;
+    }
+    .login-logo { width:72px; height:72px; border-radius:16px; object-fit:cover; margin-bottom:14px; display:none; }
+    .login-title { font-size:1.5rem; font-weight:700; color:var(--gray-800); margin-bottom:6px; letter-spacing:-0.4px; }
+    .badge-version {
+      display:inline-block; background:var(--gray-100); color:var(--gray-600);
+      font-size:0.72rem; font-family:var(--mono); padding:2px 8px; border-radius:99px; margin-bottom:20px;
+    }
+    .form-group { text-align:left; margin-bottom:16px; }
+    .form-group label {
+      display:block; font-size:0.78rem; font-weight:600; color:var(--gray-600);
+      margin-bottom:6px; letter-spacing:0.5px; text-transform:uppercase;
+    }
+    .form-group input {
+      width:100%; padding:13px 16px; border:1.5px solid var(--gray-200); border-radius:10px;
+      font-size:0.95rem; font-family:var(--sans); color:var(--gray-800);
+      transition:border-color 0.2s,box-shadow 0.2s; outline:none; background:var(--gray-50);
+    }
+    .form-group input:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(26,122,46,0.12); background:#fff; }
+    .btn-login {
+      width:100%; padding:14px; background:var(--green); color:#fff; border:none; border-radius:10px;
+      font-size:0.95rem; font-weight:700; cursor:pointer; font-family:var(--sans);
+      letter-spacing:0.5px; transition:background 0.2s,transform 0.1s; margin-top:4px;
+    }
+    .btn-login:hover  { background:var(--green-dark); }
+    .btn-login:active { transform:scale(0.98); }
+    .btn-login:disabled { opacity:0.6; cursor:not-allowed; }
+    .error-msg {
+      background:#fee2e2; color:var(--red); border:1px solid #fca5a5; border-radius:8px;
+      padding:10px 14px; font-size:0.85rem; margin-bottom:16px; text-align:left; display:none;
+    }
+    /* Modal */
+    #modal-contrato {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85);
+      z-index:9999; align-items:center; justify-content:center; padding:16px;
+      backdrop-filter:blur(4px);
+    }
+    .contrato-card {
+      background:#fff; border-radius:20px; width:100%; max-width:740px; max-height:92vh;
+      display:flex; flex-direction:column; overflow:hidden;
+      box-shadow:0 32px 80px rgba(0,0,0,0.5);
+      animation:scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes scaleIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
+    .contrato-header { background:var(--green); color:#fff; padding:22px 28px; flex-shrink:0; }
+    .contrato-header h2 { font-size:1.1rem; font-weight:700; margin-bottom:4px; }
+    .contrato-header p  { font-size:0.82rem; opacity:0.85; font-family:var(--mono); }
+    .contrato-progress { height:4px; background:rgba(255,255,255,0.2); margin-top:14px; border-radius:2px; overflow:hidden; }
+    .contrato-progress-bar { height:100%; background:#fff; width:0%; transition:width 0.3s; border-radius:2px; }
+    .contrato-body { overflow-y:auto; padding:28px; flex:1; background:var(--gray-50); }
+    .contrato-texto {
+      background:#fff; border:1px solid var(--gray-200); border-radius:12px;
+      padding:24px 28px; font-size:0.85rem; line-height:1.75; color:var(--gray-800);
+    }
+    .contrato-texto h3 {
+      font-family:var(--sans); font-size:0.95rem; font-weight:700; margin-bottom:16px;
+      color:var(--green-dark); text-align:center; text-transform:uppercase; letter-spacing:1px;
+    }
+    .contrato-texto .clausula {
+      font-family:var(--sans); font-weight:700; font-size:0.82rem; color:var(--green-dark);
+      display:block; margin-top:18px; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;
+    }
+    .contrato-texto p { margin-bottom:8px; font-family:var(--sans); font-size:0.855rem; }
+    .contrato-dados { margin-top:20px; background:#fff; border:1.5px solid var(--gray-200); border-radius:12px; padding:20px 24px; }
+    .contrato-dados h4 { font-size:0.88rem; font-weight:700; color:var(--gray-800); margin-bottom:16px; }
+    .dados-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:520px) { .dados-grid { grid-template-columns:1fr; } }
+    .dados-grid label { display:block; font-size:0.75rem; font-weight:600; color:var(--gray-600); margin-bottom:5px; text-transform:uppercase; }
+    .dados-grid input {
+      width:100%; padding:10px 13px; border:1.5px solid var(--gray-200); border-radius:8px;
+      font-size:0.88rem; font-family:var(--sans); color:var(--gray-800); background:var(--gray-50); outline:none;
+    }
+    .dados-grid input:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(26,122,46,0.1); background:#fff; }
+    .contrato-footer { padding:20px 28px; border-top:1px solid var(--gray-200); background:#fff; flex-shrink:0; }
+    .aceite-check { display:flex; align-items:flex-start; gap:12px; cursor:pointer; margin-bottom:16px; }
+    .aceite-check input[type="checkbox"] { width:20px; height:20px; flex-shrink:0; accent-color:var(--green); margin-top:2px; }
+    .aceite-check span { font-size:0.85rem; color:var(--gray-600); line-height:1.5; }
+    .aceite-check span b { color:var(--gray-800); }
+    .btn-aceitar {
+      width:100%; padding:14px; background:var(--green); color:#fff; border:none; border-radius:10px;
+      font-size:0.95rem; font-weight:700; cursor:pointer; font-family:var(--sans);
+      transition:background 0.2s,transform 0.1s,opacity 0.2s;
+    }
+    .btn-aceitar:disabled { opacity:0.45; cursor:not-allowed; }
+    .btn-aceitar:not(:disabled):hover  { background:var(--green-dark); }
+    .btn-aceitar:not(:disabled):active { transform:scale(0.98); }
+    .contrato-aviso {
+      display:flex; align-items:center; gap:8px; background:#fffbeb; border:1px solid #fcd34d;
+      border-radius:8px; padding:10px 14px; font-size:0.8rem; color:#92400e; margin-bottom:14px;
+    }
+    .spinner {
+      display:inline-block; width:16px; height:16px;
+      border:2px solid rgba(255,255,255,0.3); border-top-color:#fff;
+      border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:6px;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .scroll-hint { text-align:center; font-size:0.75rem; color:var(--gray-400); padding:8px 0 0; font-family:var(--mono); animation:pulse 2s ease infinite; }
+    @keyframes pulse { 0%,100% { opacity:0.5; } 50% { opacity:1; } }
+  </style>
+</head>
+<body>
+
+  <div class="login-wrap">
+    <div class="login-card">
+      <img id="login-logo" src="" alt="Logo" class="login-logo">
+      <h2 id="login-titulo" class="login-title">Admin</h2>
+      <div class="badge-version">Panel Administrativo</div>
+      <div id="msg-erro" class="error-msg"></div>
+      <div class="form-group">
+        <label for="email">Correo electrónico</label>
+        <input type="email" id="email" placeholder="usuario@restaurante.com"
+               onkeydown="if(event.key==='Enter') document.getElementById('senha').focus()">
+      </div>
+      <div class="form-group">
+        <label for="senha">Contraseña</label>
+        <input type="password" id="senha" placeholder="••••••••"
+               onkeydown="if(event.key==='Enter') fazerLogin()">
+      </div>
+      <button class="btn-login" id="btn-login" onclick="fazerLogin()">INGRESAR</button>
+    </div>
+  </div>
+
+  <!-- Modal Contrato -->
+  <div id="modal-contrato">
+    <div class="contrato-card">
+      <div class="contrato-header">
+        <h2>📋 Contrato de Prestación de Servicios</h2>
+        <p>Lea el contrato completo antes de continuar. Su aceptación es legalmente vinculante.</p>
+        <div class="contrato-progress">
+          <div class="contrato-progress-bar" id="contrato-progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="contrato-body" id="contrato-scroll-area" onscroll="onScrollContrato()">
+        <div class="contrato-texto">
+          <h3>Contrato de Prestación de Servicios de Software y Sistema de Pedidos</h3>
+          <p>En la ciudad de <b>Asunción, República del Paraguay</b>, a los <span id="ct-dia">___</span> días del mes de <span id="ct-mes">_________</span> del año <span id="ct-ano">2026</span>, entre:</p>
+          <p><b>Maycon Alves de Morais</b>, con CPF/BR 107.203.957-55, con domicilio en Calle Palo Santo 418, Loma Pyta, en adelante denominado <b>EL PRESTADOR</b>.</p>
+          <p>Y <b id="ct-nombre-dinamico">[Nombre del Cliente]</b>, con RUC/C.I. N° <b id="ct-doc-dinamico">[Documento]</b>, en adelante denominado <b>EL CLIENTE</b>.</p>
+          <p>Ambas partes, con plena capacidad legal, celebran el presente contrato conforme los principios del Código Civil paraguayo vigente.</p>
+
+          <span class="clausula">Cláusula Primera: Objeto</span>
+          <p>El PRESTADOR brindará al CLIENTE un sistema informático de gestión de pedidos, control comercial y administración digital, incluyendo: a) Software de pedidos, b) Panel administrativo, c) Control de ventas y reportes, d) Integraciones digitales, e) Soporte técnico, f) Actualizaciones.</p>
+
+          <span class="clausula">Cláusula Segunda: Naturaleza</span>
+          <p>Este contrato es civil, oneroso y de prestación de servicios, sin relación laboral.</p>
+
+          <span class="clausula">Cláusula Tercera: Vigencia</span>
+          <p>El contrato tendrá duración de 12 (doce) meses, renovable automáticamente.</p>
+
+          <span class="clausula">Cláusula Cuarta: Implementación</span>
+          <p>El sistema será instalado dentro de 30 días desde el pago inicial.</p>
+
+          <span class="clausula">Cláusula Quinta: Precio y Forma de Pago</span>
+          <p>1. <b>Entrada:</b> El CLIENTE abonará Gs. 600.000 por Implementación, Instalación, Capacitación y Configuración (No reembolsable).</p>
+          <p>2. <b>Mensualidad:</b> El CLIENTE abonará Gs. 150.000 mensuales por Licencia, Soporte, Seguridad y Actualizaciones, pagaderos dentro de los primeros 05 días hábiles del mes.</p>
+
+          <span class="clausula">Cláusula Sexta: Penalidades</span>
+          <p>El incumplimiento de pagos generará: a) Suspensión automática pasado 3 días, b) Intereses por mora, c) Penalidad del 10% del valor mensual, d) Rescisión con obligación de pago del 50% del saldo restante.</p>
+
+          <span class="clausula">Cláusula Séptima: Cláusula de Permanencia</span>
+          <p>El CLIENTE se compromete a mantener el servicio durante 12 meses. La cancelación anticipada implicará el pago del 50% de las mensualidades restantes.</p>
+
+          <span class="clausula">Cláusula Octava: Exclusividad</span>
+          <p>Durante la vigencia, el CLIENTE no podrá contratar sistemas similares sin autorización escrita del PRESTADOR, con excepción de marketplaces internacionales (PEDIDOS YA, MONCHIS, UBER EATS, RAPPI).</p>
+
+          <span class="clausula">Cláusula Novena: No Competencia</span>
+          <p>El CLIENTE se obliga a: a) No copiar ni replicar el sistema, b) No contratar desarrolladores para crear sistemas similares, c) No compartir información técnica. Vigente hasta 24 meses post-cancelación.</p>
+
+          <span class="clausula">Cláusula Décima: Confidencialidad</span>
+          <p>Toda información será confidencial. La violación generará indemnización para ambas partes.</p>
+
+          <span class="clausula">Cláusula Décimo Primera: Protección de Datos</span>
+          <p>El PRESTADOR implementará medidas de seguridad conforme estándares internacionales. El CLIENTE autoriza el tratamiento de datos con fines operativos.</p>
+
+          <span class="clausula">Cláusula Décimo Segunda: Seguridad Digital</span>
+          <p>El PRESTADOR garantiza protocolos de seguridad. El CLIENTE se obliga a no compartir accesos y usar contraseñas seguras.</p>
+
+          <span class="clausula">Cláusula Décimo Tercera: Propiedad Intelectual</span>
+          <p>El software pertenece exclusivamente al PRESTADOR. El CLIENTE solo adquiere licencia de uso.</p>
+
+          <span class="clausula">Cláusula Décimo Cuarta: Soporte Técnico y SLA</span>
+          <p>Horarios: Lun–Vie 08:00–18:00, Sáb 08:00–12:00. Canales: WhatsApp / Email. Tiempos: Falla Crítica ≤ 4h, Falla Media ≤ 24h, Consulta ≤ 48h. Exclusiones: desarrollos personalizados, hardware del cliente, fallas de internet local.</p>
+
+          <span class="clausula">Cláusula Décimo Quinta: Limitación de Responsabilidad</span>
+          <p>El PRESTADOR no será responsable por: Internet, Energía, Hackeos externos, Uso indebido.</p>
+
+          <span class="clausula">Cláusula Décimo Sexta: Fuerza Mayor</span>
+          <p>Eventos fuera del control de las partes no generarán responsabilidad.</p>
+
+          <span class="clausula">Cláusula Décimo Séptima: Terminación</span>
+          <p>El contrato podrá terminar: a) Por incumplimiento, b) Por falta de pago, c) Por mutuo acuerdo.</p>
+
+          <span class="clausula">Cláusula Décimo Octava: Indemnización</span>
+          <p>El incumplimiento de confidencialidad, competencia o uso indebido generará indemnización y multa mínima equivalente a 12 mensualidades.</p>
+
+          <span class="clausula">Cláusula Décimo Novena: Jurisdicción</span>
+          <p>Las partes se someten a los tribunales de Asunción, Paraguay, renunciando a cualquier otro fuero.</p>
+        </div>
+
+        <div class="contrato-dados">
+          <h4>🖊️ Complete sus datos para firmar el contrato</h4>
+          <div class="dados-grid">
+            <div>
+              <label for="c-nome">Nombre completo *</label>
+              <input type="text" id="c-nome" placeholder="Nombre y Apellido" oninput="atualizarNomeContrato(this.value)">
+            </div>
+            <div>
+              <label for="c-doc">RUC / C.I. *</label>
+              <input type="text" id="c-doc" placeholder="ej: 80012345-6" oninput="atualizarDocContrato(this.value)">
+            </div>
+          </div>
+        </div>
+
+        <div class="scroll-hint" id="scroll-hint">↓ Continúe leyendo para habilitar la aceptación</div>
+      </div>
+
+      <div class="contrato-footer">
+        <div class="contrato-aviso">
+          ⚠️ Al aceptar, se registrará su IP, dispositivo y fecha/hora como evidencia legal de aceptación.
+        </div>
+        <label class="aceite-check">
+          <input type="checkbox" id="chk-aceite" disabled onchange="toggleBtnAceitar()">
+          <span>He leído el contrato completo y <b>acepto todos los términos y condiciones</b>.</span>
+        </label>
+        <button class="btn-aceitar" id="btn-aceitar" disabled onclick="aceitarContrato()">
+          ✍️ FIRMAR Y CONTINUAR
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="supabaseClient.js"></script>
+  <script>
+  let _sessionAtual   = null;
+  let _scrollCompleto = false;
+
+  window.addEventListener('DOMContentLoaded', async function () {
+    const hoje  = new Date();
+    const meses = ['enero','febrero','marzo','abril','mayo','junio',
+                   'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const el = (id) => document.getElementById(id);
+    el('ct-dia').textContent = hoje.getDate();
+    el('ct-mes').textContent = meses[hoje.getMonth()];
+    el('ct-ano').textContent = hoje.getFullYear();
+    try {
+      if (window.supa) {
+        const { data } = await window.supa.from('configuracoes')
+          .select('nome_restaurante, logo_url, icone_url, cor_primaria').maybeSingle();
+        if (data) {
+          if (data.nome_restaurante) {
+            el('login-titulo').textContent = data.nome_restaurante;
+            document.title = 'Login — ' + data.nome_restaurante;
+          }
+          const logo = data.logo_url || data.icone_url || '';
+          if (logo) { el('login-logo').src = logo; el('login-logo').style.display = 'block'; }
+          if (data.cor_primaria) document.documentElement.style.setProperty('--green', data.cor_primaria);
+        }
+      }
+    } catch(e) {}
+  });
+
+  async function fazerLogin() {
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('senha').value;
+    const msgEl    = document.getElementById('msg-erro');
+    const btnEl    = document.getElementById('btn-login');
+    msgEl.style.display = 'none';
+    if (!email || !password) { msgEl.textContent = 'Complete el correo y la contraseña.'; msgEl.style.display = 'block'; return; }
+    if (!window.supa) { msgEl.textContent = 'Error: base de datos no conectada.'; msgEl.style.display = 'block'; return; }
+    btnEl.disabled  = true;
+    btnEl.innerHTML = '<span class="spinner"></span>Verificando...';
+    try {
+      const { data, error } = await supa.auth.signInWithPassword({ email, password });
+      if (error) {
+        msgEl.textContent = 'Error: ' + error.message; msgEl.style.display = 'block';
+        btnEl.disabled = false; btnEl.textContent = 'INGRESAR'; return;
+      }
+      _sessionAtual = data.session;
+      await verificarContrato(_sessionAtual);
+    } catch (err) {
+      msgEl.textContent = 'Error inesperado: ' + err.message; msgEl.style.display = 'block';
+      btnEl.disabled = false; btnEl.textContent = 'INGRESAR';
+    }
+  }
+
+  async function verificarContrato(session) {
+    try {
+      const { data, error } = await supa.from('contratos_aceites')
+        .select('id').eq('usuario_id', session.user.id).eq('aceito', true).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (data) { window.location.href = 'admin.html'; }
+      else { mostrarModalContrato(); document.getElementById('c-nome').focus(); }
+    } catch(e) { console.error('verificarContrato:', e); window.location.href = 'admin.html'; }
+  }
+
+  function mostrarModalContrato() {
+    const modal = document.getElementById('modal-contrato');
+    modal.style.display = 'flex';
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        const card = document.querySelector('.contrato-card');
+        card.style.animation = 'none';
+        setTimeout(() => { card.style.animation = 'shake 0.3s ease'; }, 10);
+      }
+    });
+  }
+
+  function atualizarNomeContrato(val) {
+    document.getElementById('ct-nombre-dinamico').textContent = val || '[Nombre del Cliente]';
+    toggleBtnAceitar();
+  }
+  function atualizarDocContrato(val) {
+    document.getElementById('ct-doc-dinamico').textContent = val || '[Documento]';
+  }
+  function onScrollContrato() {
+    const el  = document.getElementById('contrato-scroll-area');
+    const pct = Math.min(100, Math.round(el.scrollTop / (el.scrollHeight - el.clientHeight) * 100));
+    document.getElementById('contrato-progress-bar').style.width = pct + '%';
+    if (pct >= 92 && !_scrollCompleto) {
+      _scrollCompleto = true;
+      document.getElementById('chk-aceite').disabled = false;
+      const hint = document.getElementById('scroll-hint');
+      hint.style.opacity = '0'; hint.style.transition = 'opacity 0.5s';
+    }
+  }
+  function toggleBtnAceitar() {
+    const chk  = document.getElementById('chk-aceite');
+    const nome = document.getElementById('c-nome').value.trim();
+    const doc  = document.getElementById('c-doc').value.trim();
+    document.getElementById('btn-aceitar').disabled = !(chk.checked && nome && doc);
+  }
+  async function aceitarContrato() {
+    const btnAc = document.getElementById('btn-aceitar');
+    const nome  = document.getElementById('c-nome').value.trim();
+    const doc   = document.getElementById('c-doc').value.trim();
+    if (!nome || !doc) { alert('Complete su nombre y documento antes de firmar.'); return; }
+    if (!document.getElementById('chk-aceite').checked) { alert('Debe marcar la casilla de aceptación.'); return; }
+    btnAc.disabled = true; btnAc.innerHTML = '<span class="spinner"></span>Registrando firma...';
+    try {
+      let ipAddress = 'no_disponible';
+      try {
+        const r = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(4000) });
+        ipAddress = (await r.json()).ip || 'no_disponible';
+      } catch(_) {}
+      const { error } = await supa.from('contratos_aceites').insert([{
+        usuario_id: _sessionAtual.user.id, email: _sessionAtual.user.email,
+        nome_cliente: nome, documento_cliente: doc,
+        ip_address: ipAddress, user_agent: navigator.userAgent,
+        aceito: true, versao_contrato: 'v1.0-2026',
+        hash_contrato: await sha256ContratoCanonico(),
+      }]);
+      if (error) throw new Error(error.message);
+      btnAc.innerHTML = '✅ ¡Firmado! Redirigiendo...';
+      btnAc.style.background = '#059669';
+      setTimeout(() => { window.location.href = 'admin.html'; }, 1200);
+    } catch(e) {
+      btnAc.disabled = false; btnAc.textContent = '✍️ FIRMAR Y CONTINUAR';
+      alert('Error al registrar la firma: ' + e.message);
+    }
+  }
+  async function sha256ContratoCanonico() {
+    try {
+      const buf = await crypto.subtle.digest('SHA-256',
+        new TextEncoder().encode('CONTRATO-PRESTACION-SERVICIOS-SOFTWARE-v1.0-2026-MAYCON-ALVES-DE-MORAIS'));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    } catch(_) { return 'sha256_no_disponible'; }
+  }
+  const ss = document.createElement('style');
+  ss.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}';
+  document.head.appendChild(ss);
+  </script>
+</body>
+</html>
